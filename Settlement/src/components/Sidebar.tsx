@@ -13,7 +13,8 @@ import {
   Briefcase,
   Users,
   GraduationCap,
-  Plus
+  Plus,
+  LogOut
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import type { Group } from '../context/AppContext';
@@ -37,7 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setSelectedGroupId,
   onTriggerAction,
 }) => {
-  const { groups, currentUser, isOffline } = useApp();
+  const { groups, currentUser, isOffline, logout } = useApp();
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
@@ -193,16 +194,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </nav>
 
-        <div className="sidebar-profile">
-          <div className="avatar">A</div>
-          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {currentUser.name}
-            </span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
-              {isOffline ? 'Offline Mode' : 'Cloud Synced'}
-            </span>
+        <div className="sidebar-profile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden', flexGrow: 1 }}>
+            <div className="avatar">{currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {currentUser.name}
+              </span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
+                {isOffline ? 'Offline Mode' : 'Cloud Synced'}
+              </span>
+            </div>
           </div>
+          <button
+            onClick={() => logout()}
+            title="Log Out"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--text-tertiary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '6px',
+              borderRadius: 'var(--radius-sm)',
+              transition: 'all var(--transition-fast)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+              e.currentTarget.style.color = 'var(--color-red)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'var(--text-tertiary)';
+            }}
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </aside>
 

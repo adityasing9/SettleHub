@@ -10,8 +10,11 @@ import { LedgerView } from './views/LedgerView';
 import { OcrScannerView } from './views/OcrScannerView';
 import { AnalyticsView } from './views/AnalyticsView';
 import { ReportsView } from './views/ReportsView';
+import { useApp } from './context/AppContext';
+import { LoginView } from './views/LoginView';
 
 function AppContent() {
+  const { isLoggedIn } = useApp();
   // View states
   const [view, setView] = useState('dashboard');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -86,6 +89,10 @@ function AppContent() {
         );
     }
   };
+
+  if (!isLoggedIn) {
+    return <LoginView />;
+  }
 
   return (
     <>

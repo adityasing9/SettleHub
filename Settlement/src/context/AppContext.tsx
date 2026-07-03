@@ -81,6 +81,10 @@ interface AppContextType {
   clearNotification: (id: string) => void;
   triggerSync: () => Promise<void>;
   isSyncing: boolean;
+  isLoggedIn: boolean;
+  login: (email: string, name: string) => void;
+  logout: () => void;
+  register: (email: string, name: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -270,7 +274,13 @@ const DEFAULT_ACTIVITIES: Activity[] = [
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load from localStorage if present, otherwise use default mock data
-  const [currentUser] = useState<Member>(DEFAULT_CURRENT_USER);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    return localStorage.getItem('sh_is_logged_in') === 'true';
+  });
+  const [currentUser, setCurrentUser] = useState<Member>(() => {
+    const local = localStorage.getItem('sh_current_user');
+    return local ? JSON.parse(local) : DEFAULT_CURRENT_USER;
+  });
   const [members, setMembers] = useState<Member[]>(() => {
     const local = localStorage.getItem('sh_members');
     return local ? JSON.parse(local) : DEFAULT_MEMBERS;
@@ -295,12 +305,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [searchQuery, setSearchQuery] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const local = localStorage.getItem('sh_theme');
-    return (local as 'light' | 'dark') || 'dark'; // default to dark per preference, togglable
+    return (local as 'light' | 'dark') || 'light'; // default to light
   });
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Synchronize with localStorage on change
+  useEffect(() => {
+    localStorage.setItem('sh_current_user', JSON.stringify(currentUser));
+  }, [currentUser]);
+
+  useEffect(() => {
+    localStorage.setItem('sh_is_logged_in', String(isLoggedIn));
+  }, [isLoggedIn]);
+
   useEffect(() => {
     localStorage.setItem('sh_members', JSON.stringify(members));
   }, [members]);
@@ -636,6 +654,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addNotification('Sync Complete', 'SettleHub database successfully synced with cloud servers.', 'success');
   };
 
+  const login = (email: string, name: string) => {
+    let user = members.find((m) => m.email?.toLowerCase() === email.toLowerCase());
+    if (!user) {
+      user = addMember(name, email);
+    } else {
+      user = { ...user, name };
+      setMembers((prev) => prev.map((m) => (m.id === user?.id ? { ...m, name } : m)));
+    }
+    setCurrentUser(user);
+    setIsLoggedIn(true);
+    addNotification('Login Successful', `Welcome back, ${user.name}!`, 'success');
+  };
+
+  const logout = () => {
+    setIsLoggedIn(false);
+    addNotification('Logged Out', 'You have been successfully logged out.', 'info');
+  };
+
+  const register = (email: string, name: string) => {
+    const user = addMember(name, email);
+    setCurrentUser(user);
+    setIsLoggedIn(true);
+    addNotification('Account Created', `Welcome to SettleHub, ${user.name}!`, 'success');
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -651,6 +694,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleTheme,
         isOffline,
         setIsOffline,
+        isLoggedIn,
+        login,
+        logout,
+        register,
         addMember,
         createGroup,
         deleteGroup,
