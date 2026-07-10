@@ -1,0 +1,247 @@
+Screen {
+    background: $surface;
+}
+
+#sidebar {
+    width: 30;
+    dock: left;
+    background: $panel;
+    border-right: vkey $primary;
+    height: 100%;
+    transition: offset 200ms in_out_cubic;
+}
+
+#sidebar.-hidden {
+    offset-x: -100%;
+}
+
+#sidebar-title {
+    padding: 1;
+    text-align: center;
+    text-style: bold;
+    color: $text;
+    background: $primary-darken-1;
+    width: 100%;
+}
+
+#sidebar-list {
+    height: 1fr;
+    scrollbar-size: 1 1;
+}
+
+#sidebar-list ListItem {
+    padding: 0 1;
+}
+
+#content {
+    width: 1fr;
+    height: 100%;
+    padding: 2 4;
+    background: $surface;
+}
+
+#welcome-message {
+    text-align: center;
+    width: 100%;
+    margin-top: 2;
+    color: $text-muted;
+}
+
+.module-title {
+    text-style: bold;
+    padding-bottom: 1;
+    color: $accent;
+    width: 100%;
+    text-align: center;
+}
+
+#encyclopedia-search {
+    margin-bottom: 1;
+    border: tall $primary-muted;
+}
+
+#encyclopedia-table {
+    height: 1fr;
+    border: solid $surface-light;
+}
+
+#notes-container {
+    height: 1fr;
+}
+
+#notes-sidebar {
+    width: 25;
+    border-right: vkey $primary;
+    height: 100%;
+}
+
+#notes-list {
+    height: 1fr;
+    scrollbar-size: 1 1;
+}
+
+#notes-editor-container {
+    width: 1fr;
+    height: 100%;
+    padding: 0 2;
+}
+
+#note-title {
+    margin-bottom: 1;
+    border: none;
+    border-bottom: tall $primary-muted;
+    background: transparent;
+    text-style: bold;
+}
+
+#note-content {
+    height: 1fr;
+    border: none;
+    background: $surface;
+}
+
+#notes-actions {
+    height: 3;
+    dock: bottom;
+    align: center middle;
+}
+
+#notes-actions Button {
+    margin: 0 1;
+}
+
+#users-table {
+    height: 1fr;
+    border: solid $surface-light;
+}
+
+#users-actions {
+    height: 3;
+    dock: bottom;
+    align: left middle;
+    padding: 0 2;
+}
+
+#users-notice {
+    margin-left: 2;
+    color: $text-muted;
+}
+
+.section-label {
+    text-style: bold;
+    margin-top: 1;
+    margin-bottom: 1;
+    color: $text;
+}
+
+#folder-size-input-row {
+    height: 3;
+    margin-bottom: 1;
+}
+
+#folder-size-input-row Input {
+    width: 3fr;
+    margin-right: 1;
+}
+
+#folder-size-input-row Button {
+    width: 1fr;
+}
+
+#folder-size-output {
+    margin-top: 1;
+    padding: 1;
+    background: $surface-light;
+    border: solid $primary-muted;
+}
+
+#network-actions {
+    height: 3;
+    margin-bottom: 1;
+}
+
+#network-ip-output {
+    padding: 1;
+    background: $surface-light;
+    border: solid $primary-muted;
+    margin-bottom: 2;
+}
+
+#ping-input-row {
+    height: 3;
+    margin-bottom: 1;
+}
+
+#ping-input-row Input {
+    width: 3fr;
+    margin-right: 1;
+}
+
+#ping-input-row Button {
+    width: 1fr;
+}
+
+.terminal-output {
+    height: 1fr;
+    padding: 1;
+    background: $surface-dark;
+    color: $success;
+    border: solid $surface-light;
+    overflow-y: scroll;
+}
+
+#download-input-row {
+    height: 3;
+    margin-bottom: 1;
+}
+
+#download-input-row Input {
+    width: 3fr;
+    margin-right: 1;
+}
+
+#download-input-row Button {
+    width: 1fr;
+}
+
+#sysinfo-table {
+    height: 1fr;
+    border: solid $surface-light;
+}
+
+#dev-tools-table {
+    height: 1fr;
+    border: solid $surface-light;
+}
+
+#password-gen-row, #uuid-gen-row, #qr-input-row {
+    height: 3;
+    margin-bottom: 2;
+}
+
+#password-gen-row Button, #uuid-gen-row Button {
+    width: 25;
+    margin-right: 1;
+}
+
+#password-gen-row Input, #uuid-gen-row Input {
+    width: 1fr;
+}
+
+#qr-input-row Input {
+    width: 3fr;
+    margin-right: 1;
+}
+
+#qr-input-row Button {
+    width: 1fr;
+}
+
+#cleanup-actions {
+    height: 3;
+    margin-bottom: 1;
+}
+
+#cleanup-actions Button {
+    margin-right: 1;
+}
