@@ -174,6 +174,21 @@ class ExpenseResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class ExpenseCategoryResponse(BaseModel):
+    id: int
+    name: str
+    icon: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class ExpenseTagResponse(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
 # --- Transaction Schemas ---
 class TransactionCreate(BaseModel):
     from_person_id: int
