@@ -1,0 +1,14 @@
+# Python files
+**/__pycache__/
+**/*.pyc
+*.pyc
+backend/venv/
+backend/settlementhub.db
+backend/db.sqlite3
+backend/.env
+
+# Frontend Node/Build
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.oxlintrc.json
