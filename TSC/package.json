@@ -1,0 +1,13 @@
+{
+  "name": "smartsplit-workspace",
+  "version": "1.0.0",
+  "description": "SmartSplit - AI-Powered Transaction Settlement Calculator PWA workspace",
+  "scripts": {
+    "install:server": "npm install --prefix server",
+    "install:client": "npm install --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build:server": "npm run build --prefix server",
+    "build:client": "npm run build --prefix client"
+  }
+}

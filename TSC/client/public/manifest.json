@@ -1,0 +1,21 @@
+{
+  "name": "SmartSplit - AI Settlement PWA",
+  "short_name": "SmartSplit",
+  "description": "Progressive Web App for Transaction Settlements & Expense Sharing",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0F19",
+  "theme_color": "#2563EB",
+  "icons": [
+    {
+      "src": "https://api.dicebear.com/7.x/identicon/svg?seed=SmartSplit",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "https://api.dicebear.com/7.x/identicon/svg?seed=SmartSplit",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

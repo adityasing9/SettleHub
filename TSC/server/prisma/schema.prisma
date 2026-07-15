@@ -1,0 +1,209 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum SplitType {
+  EQUAL
+  PERCENTAGE
+  EXACT
+  WEIGHTED
+  SHARES
+  CUSTOM
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  avatar        String?
+  phone         String?
+  upiId         String?
+  bankName      String?
+  bankAccount   String?
+  bankIfsc      String?
+  role          Role           @default(USER)
+  isVerified    Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  // Relations
+  members       Member[]
+  adminGroups   Group[]        @relation("GroupAdmin")
+  createdLogs   ActivityLog[]  @relation("ActorUser")
+  notifications Notification[]
+}
+
+model Group {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  currency    String   @default("INR") // Default currency code (e.g. INR, USD)
+  inviteCode  String   @unique
+  adminId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  admin        User          @relation("GroupAdmin", fields: [adminId], references: [id])
+  members      Member[]
+  transactions Transaction[]
+  settlements  Settlement[]
+  payments     Payment[]
+  logs         ActivityLog[]
+}
+
+model Member {
+  id          String   @id @default(uuid())
+  groupId     String
+  userId      String?  // Linked user account (optional, for registered users)
+  name        String   // Custom name within the group
+  email       String?
+  phone       String?
+  upiId       String?
+  bankDetails String?
+  color       String   @default("#2563EB")
+  status      String   @default("ACTIVE") // ACTIVE, INVITED, INACTIVE
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  group                Group                    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user                 User?                    @relation(fields: [userId], references: [id])
+  paidTransactions     Transaction[]            @relation("TransactionPayer")
+  shares               TransactionParticipant[]
+  settlementsPaid      Settlement[]             @relation("SettlementFrom")
+  settlementsReceived  Settlement[]             @relation("SettlementTo")
+  paymentsPaid         Payment[]                @relation("PaymentFrom")
+  paymentsReceived     Payment[]                @relation("PaymentTo")
+
+  @@unique([groupId, email])
+}
+
+model Transaction {
+  id          String     @id @default(uuid())
+  groupId     String
+  payerId     String     // Member who paid
+  amount      Decimal    @db.Decimal(12, 2)
+  itemName    String
+  category    String     @default("General")
+  description String?
+  date        DateTime   @default(now())
+  splitType   SplitType  @default(EQUAL)
+  receiptUrl  String?
+  location    String?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  group        Group                    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  payer        Member                   @relation("TransactionPayer", fields: [payerId], references: [id])
+  participants TransactionParticipant[]
+  tags         Tag[]
+}
+
+model TransactionParticipant {
+  id            String      @id @default(uuid())
+  transactionId String
+  memberId      String
+  shareValue    Decimal     @db.Decimal(12, 2) // raw value depending on SplitType (percentage, weight, absolute, etc.)
+  calculatedOwe Decimal     @db.Decimal(12, 2) // the actual amount (in group currency) this member owes for this transaction
+
+  // Relations
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  member        Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  
+  @@unique([transactionId, memberId])
+}
+
+model Settlement {
+  id          String   @id @default(uuid())
+  groupId     String
+  fromId      String   // Member who owes
+  toId        String   // Member who receives
+  amount      Decimal  @db.Decimal(12, 2)
+  status      String   @default("PENDING") // PENDING, COMPLETED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  group Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  from  Member @relation("SettlementFrom", fields: [fromId], references: [id])
+  to    Member @relation("SettlementTo", fields: [toId], references: [id])
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  groupId       String
+  fromId        String   // Member who paid
+  toId          String   // Member who received
+  amount        Decimal  @db.Decimal(12, 2)
+  date          DateTime @default(now())
+  paymentMethod String   @default("UPI") // UPI, BANK_TRANSFER, CASH
+  notes         String?
+  receiptUrl    String?
+  status        String   @default("COMPLETED") // COMPLETED, PENDING_VERIFICATION
+  createdAt     DateTime @default(now())
+
+  // Relations
+  group Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  from  Member @relation("PaymentFrom", fields: [fromId], references: [id])
+  to    Member @relation("PaymentTo", fields: [toId], references: [id])
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  groupId    String
+  actorId    String   // User who performed the action
+  action     String   // e.g., "CREATE_TRANSACTION", "DELETE_MEMBER"
+  details    String   @db.Text // JSON string containing old/new values
+  createdAt  DateTime @default(now())
+
+  // Relations
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  actor User  @relation("ActorUser", fields: [actorId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // SYSTEM, REMINDER, GROUP_INVITE, TRANSACTION
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Tag {
+  id             String      @id @default(uuid())
+  name           String
+  transactionId  String
+  transaction    Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  icon      String   // icon identifier (lucide icon name)
+  color     String   // HEX color code
+}
+
+model Currency {
+  id        String   @id @default(uuid())
+  code      String   @unique // INR, USD, EUR, etc.
+  symbol    String   // ₹, $, €, etc.
+  rate      Decimal  @db.Decimal(12, 4) // Rate relative to USD (USD = 1.0000)
+}
