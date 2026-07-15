@@ -32,8 +32,12 @@ try:
         logger.info(f"Connected to database using URL: {db_url}")
 except Exception as e:
     logger.error(f"Failed to connect to primary database ({db_url}). Error: {e}")
-    logger.info("Falling back to local SQLite database (sqlite:///./settlementhub.db) for demo/fallback purposes.")
-    db_url = "sqlite:///./settlementhub.db"
+    import os
+    if os.environ.get("VERCEL"):
+        db_url = "sqlite:////tmp/settlementhub.db"
+    else:
+        db_url = "sqlite:///./settlementhub.db"
+    logger.info(f"Falling back to local SQLite database ({db_url}) for demo/fallback purposes.")
     engine = create_engine(
         db_url,
         connect_args={"check_same_thread": False}
