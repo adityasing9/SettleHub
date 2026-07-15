@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: settlementhub_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./settlementhub.db
+      - SECRET_KEY=your-super-secret-key
+      - CORS_ORIGINS=http://localhost:3000,http://localhost
+    volumes:
+      - backend_data:/app
+
+  frontend:
+    build: ./frontend
+    container_name: settlementhub_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  backend_data:
