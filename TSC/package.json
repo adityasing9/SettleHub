@@ -8,7 +8,8 @@
     "dev:server": "npm run dev --prefix server",
     "dev:client": "npm run dev --prefix client",
     "build:server": "npm run build --prefix server",
-    "build:client": "npm run build --prefix client"
+    "build:client": "npm run build --prefix client",
+    "postinstall": "prisma generate --schema=server/prisma/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^5.12.1",
