@@ -1,5 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <rect width="512" height="512" rx="128" fill="#2563EB"/>
-  <path d="M140 180C140 157.909 157.909 140 180 140H332C354.091 140 372 157.909 372 180V332C372 354.091 354.091 372 332 372H180C157.909 372 140 354.091 140 332V180Z" stroke="white" stroke-width="24"/>
-  <path d="M210 210H302M210 256H302M210 256C210 285 240 300 270 300L302 342" stroke="white" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#1E1B4B"/>
+    </linearGradient>
+    <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Squircle Background -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGrad)"/>
+  <rect x="16" y="16" width="480" height="480" rx="104" stroke="white" stroke-opacity="0.15" stroke-width="4"/>
+
+  <!-- Center Circle -->
+  <circle cx="256" cy="256" r="160" fill="white" fill-opacity="0.08" stroke="white" stroke-opacity="0.2" stroke-width="4"/>
+
+  <!-- Upper Green Outgoing / Settle Arrow (Right) -->
+  <path d="M160 196H330" stroke="url(#arrowGrad)" stroke-width="24" stroke-linecap="round"/>
+  <path d="M310 166L355 196L310 226" stroke="url(#arrowGrad)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Lower White Incoming Arrow (Left) -->
+  <path d="M352 316H182" stroke="white" stroke-width="24" stroke-linecap="round"/>
+  <path d="M202 286L157 316L202 346" stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Center Rupee Symbol -->
+  <path d="M220 226H292" stroke="white" stroke-width="18" stroke-linecap="round"/>
+  <path d="M220 248H280" stroke="white" stroke-width="18" stroke-linecap="round"/>
+  <path d="M242 226V266C242 277 251 286 262 286H272" stroke="white" stroke-width="18" stroke-linecap="round"/>
+  <path d="M242 274L284 318" stroke="white" stroke-width="20" stroke-linecap="round"/>
 </svg>
