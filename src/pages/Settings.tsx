@@ -38,8 +38,16 @@ export const Settings: React.FC = () => {
         setImportFileContent(event.target?.result as string);
         setIsImportOpen(true);
       };
+      reader.onerror = () => {
+        showToast({
+          type: 'error',
+          title: 'File Read Error',
+          description: 'Could not read the selected JSON file.'
+        });
+      };
       reader.readAsText(file);
     }
+    e.target.value = '';
   };
 
   const handleConfirmImport = async () => {
