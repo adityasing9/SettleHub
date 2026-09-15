@@ -2,13 +2,25 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { registerSW } from 'virtual:pwa-register';
 
-// Register Service Worker for offline support & PWA functionality
-registerSW({ immediate: true });
+// Safely register Service Worker without blocking rendering
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  import('virtual:pwa-register').then(({ registerSW }) => {
+    try {
+      registerSW({ immediate: true });
+    } catch (err) {
+      console.warn('Service Worker registration deferred:', err);
+    }
+  }).catch(() => {
+    // PWA SW not available in non-PWA dev builds
+  });
+}
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+}
