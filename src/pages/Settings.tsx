@@ -449,8 +449,8 @@ export const Settings: React.FC = () => {
             </label>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+          {/* Actions - Sticky at bottom */}
+          <div className="sticky -bottom-5 bg-white dark:bg-slate-900 pt-3 pb-3 -mx-5 px-5 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 z-10 shadow-lg">
             <Button
               variant="ghost"
               onClick={() => {
