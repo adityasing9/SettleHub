@@ -2,32 +2,29 @@
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#4F46E5"/>
-      <stop offset="100%" stop-color="#1E1B4B"/>
-    </linearGradient>
-    <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#34D399"/>
-      <stop offset="100%" stop-color="#10B981"/>
+      <stop offset="50%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#312E81"/>
     </linearGradient>
   </defs>
 
-  <!-- Squircle Background -->
+  <!-- Squircle Base -->
   <rect width="512" height="512" rx="120" fill="url(#bgGrad)"/>
-  <rect x="16" y="16" width="480" height="480" rx="104" stroke="white" stroke-opacity="0.15" stroke-width="4"/>
+  <rect x="14" y="14" width="484" height="484" rx="106" stroke="white" stroke-opacity="0.25" stroke-width="6"/>
 
-  <!-- Center Circle -->
-  <circle cx="256" cy="256" r="160" fill="white" fill-opacity="0.08" stroke="white" stroke-opacity="0.2" stroke-width="4"/>
+  <!-- Subtle Badge Backdrop -->
+  <circle cx="256" cy="256" r="170" fill="white" fill-opacity="0.1" stroke="white" stroke-opacity="0.25" stroke-width="4"/>
 
-  <!-- Upper Green Outgoing / Settle Arrow (Right) -->
-  <path d="M160 196H330" stroke="url(#arrowGrad)" stroke-width="24" stroke-linecap="round"/>
-  <path d="M310 166L355 196L310 226" stroke="url(#arrowGrad)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Bold Green Outgoing Arrow (Top) -->
+  <path d="M140 180H340" stroke="#34D399" stroke-width="32" stroke-linecap="round"/>
+  <path d="M310 145L375 180L310 215" fill="#34D399"/>
 
-  <!-- Lower White Incoming Arrow (Left) -->
-  <path d="M352 316H182" stroke="white" stroke-width="24" stroke-linecap="round"/>
-  <path d="M202 286L157 316L202 346" stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Bold White Incoming Arrow (Bottom) -->
+  <path d="M372 332H172" stroke="#FFFFFF" stroke-width="32" stroke-linecap="round"/>
+  <path d="M202 297L137 332L202 367" fill="#FFFFFF"/>
 
-  <!-- Center Rupee Symbol -->
-  <path d="M220 226H292" stroke="white" stroke-width="18" stroke-linecap="round"/>
-  <path d="M220 248H280" stroke="white" stroke-width="18" stroke-linecap="round"/>
-  <path d="M242 226V266C242 277 251 286 262 286H272" stroke="white" stroke-width="18" stroke-linecap="round"/>
-  <path d="M242 274L284 318" stroke="white" stroke-width="20" stroke-linecap="round"/>
+  <!-- Centered Rupee Symbol -->
+  <path d="M195 225H315" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round"/>
+  <path d="M195 255H295" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round"/>
+  <path d="M225 225V275C225 292 238 300 258 300H270" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round"/>
+  <path d="M225 285L298 355" stroke="#FFFFFF" stroke-width="28" stroke-linecap="round"/>
 </svg>
