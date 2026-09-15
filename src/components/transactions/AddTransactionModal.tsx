@@ -65,11 +65,24 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       } else if (defaultFriendId) {
         setMode('INDIVIDUAL');
         setFriendId(defaultFriendId);
-      } else if (activeFriends.length > 0) {
-        setFriendId(activeFriends[0].id);
+      } else {
+        setMode('INDIVIDUAL');
+        setFriendId(prev => {
+          if (prev && activeFriends.some(f => f.id === prev)) {
+            return prev;
+          }
+          return activeFriends.length > 0 ? activeFriends[0].id : '';
+        });
       }
     }
-  }, [isOpen, defaultFriendId, defaultGroupId, activeFriends]);
+  }, [isOpen, defaultFriendId, defaultGroupId]);
+
+  // Set initial friendId once when activeFriends loads if not already set
+  useEffect(() => {
+    if (isOpen && mode === 'INDIVIDUAL' && !defaultFriendId && !friendId && activeFriends.length > 0) {
+      setFriendId(activeFriends[0].id);
+    }
+  }, [isOpen, mode, defaultFriendId, friendId, activeFriends]);
 
   // When group changes, update selected participants
   useEffect(() => {
@@ -238,7 +251,13 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             ) : (
               <Select
                 value={friendId}
-                onChange={e => setFriendId(e.target.value)}
+                onChange={e => {
+                  const newId = e.target.value;
+                  setFriendId(newId);
+                  if (paidBy !== 'ME') {
+                    setPaidBy(newId);
+                  }
+                }}
               >
                 {activeFriends.map(f => (
                   <option key={f.id} value={f.id}>
