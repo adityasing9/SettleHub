@@ -18,7 +18,11 @@ import {
   ShieldCheck,
   Smartphone,
   Info,
-  Layers
+  Layers,
+  FileText,
+  Clipboard,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 
 export const Settings: React.FC = () => {
@@ -26,23 +30,55 @@ export const Settings: React.FC = () => {
   const { showToast } = useToast();
 
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importTab, setImportTab] = useState<'file' | 'paste'>('file');
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
   const [importFileContent, setImportFileContent] = useState<string | null>(null);
+  const [importFileName, setImportFileName] = useState<string | null>(null);
+  const [pastedJson, setPastedJson] = useState<string>('');
   const [isClearOpen, setIsClearOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
+  const activeJsonContent = importTab === 'file' ? importFileContent : pastedJson;
+
+  const getJsonPreview = (jsonStr: string | null) => {
+    if (!jsonStr || !jsonStr.trim()) return null;
+    try {
+      const raw = JSON.parse(jsonStr);
+      const root = raw.data && typeof raw.data === 'object' ? raw.data : raw;
+      const rawFriends = root.friends || root.Friends || [];
+      const rawTransactions = root.transactions || root.Transactions || [];
+      const rawGroups = root.groups || root.Groups || [];
+
+      if (!Array.isArray(rawFriends) && !Array.isArray(rawTransactions) && !Array.isArray(rawGroups)) {
+        return { isValid: false, error: 'Backup does not contain valid friends or transactions lists.' };
+      }
+
+      return {
+        isValid: true,
+        friendsCount: Array.isArray(rawFriends) ? rawFriends.length : 0,
+        transactionsCount: Array.isArray(rawTransactions) ? rawTransactions.length : 0,
+        groupsCount: Array.isArray(rawGroups) ? rawGroups.length : 0
+      };
+    } catch (e: any) {
+      return { isValid: false, error: 'Invalid JSON syntax. Please check file or pasted text.' };
+    }
+  };
+
+  const preview = getJsonPreview(activeJsonContent);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setImportFileName(file.name);
       const reader = new FileReader();
       reader.onload = event => {
         setImportFileContent(event.target?.result as string);
-        setIsImportOpen(true);
       };
       reader.onerror = () => {
         showToast({
           type: 'error',
           title: 'File Read Error',
-          description: 'Could not read the selected JSON file.'
+          description: 'Could not read the selected file on this device.'
         });
       };
       reader.readAsText(file);
@@ -50,24 +86,70 @@ export const Settings: React.FC = () => {
     e.target.value = '';
   };
 
+  const handlePasteFromClipboard = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          setPastedJson(text);
+          showToast({
+            type: 'info',
+            title: 'Pasted from Clipboard',
+            description: 'JSON text loaded into input area.'
+          });
+          return;
+        }
+      }
+    } catch (e) {
+      // Fallback
+    }
+    showToast({
+      type: 'info',
+      title: 'Paste JSON',
+      description: 'Long press in the text box below and select Paste.'
+    });
+  };
+
   const handleConfirmImport = async () => {
-    if (!importFileContent) return;
-    const result = await importJSONBackup(importFileContent, importMode);
-    if (result.success) {
-      showToast({
-        type: 'success',
-        title: 'Import Successful',
-        description: result.message
-      });
-    } else {
+    const contentToImport = importTab === 'file' ? importFileContent : pastedJson;
+    if (!contentToImport || !contentToImport.trim()) {
       showToast({
         type: 'error',
-        title: 'Import Failed',
-        description: result.message
+        title: 'No Data',
+        description: 'Please select a JSON file or paste backup JSON text.'
       });
+      return;
     }
-    setIsImportOpen(false);
-    setImportFileContent(null);
+
+    try {
+      setIsImporting(true);
+      const result = await importJSONBackup(contentToImport, importMode);
+      if (result.success) {
+        showToast({
+          type: 'success',
+          title: 'Import Successful',
+          description: result.message
+        });
+        setIsImportOpen(false);
+        setImportFileContent(null);
+        setImportFileName(null);
+        setPastedJson('');
+      } else {
+        showToast({
+          type: 'error',
+          title: 'Import Failed',
+          description: result.message
+        });
+      }
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        title: 'Import Error',
+        description: err.message || 'An unexpected error occurred during import.'
+      });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const handleClearAllData = async () => {
@@ -159,11 +241,10 @@ export const Settings: React.FC = () => {
             <span>Export CSV Report</span>
           </Button>
 
-          <label className="inline-flex items-center justify-center font-medium rounded-xl px-3 py-1.5 text-xs gap-1.5 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-all">
+          <Button onClick={() => setIsImportOpen(true)} variant="outline" size="sm">
             <Upload className="w-4 h-4 text-amber-500" />
             <span>Import JSON Backup</span>
-            <input type="file" accept=".json" onChange={handleFileChange} className="hidden" />
-          </label>
+          </Button>
         </div>
       </Card>
 
@@ -208,19 +289,127 @@ export const Settings: React.FC = () => {
         </Button>
       </Card>
 
-      {/* Import Modal */}
+      {/* Enhanced Universal Mobile-Friendly Import Modal */}
       <Modal
         isOpen={isImportOpen}
-        onClose={() => setIsImportOpen(false)}
+        onClose={() => {
+          setIsImportOpen(false);
+          setImportFileContent(null);
+          setImportFileName(null);
+          setPastedJson('');
+        }}
         title="Import Backup Data"
-        subtitle="Select import mode"
+        subtitle="Restore from JSON file or paste backup text"
       >
         <div className="space-y-4">
-          <p className="text-xs text-slate-600 dark:text-slate-300">
-            Choose how to handle existing data when importing this backup file:
-          </p>
+          {/* Tabs: Choose File vs Paste JSON */}
+          <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => setImportTab('file')}
+              className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                importTab === 'file'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Select File</span>
+            </button>
 
-          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setImportTab('paste')}
+              className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                importTab === 'paste'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Clipboard className="w-3.5 h-3.5" />
+              <span>Paste JSON Text</span>
+            </button>
+          </div>
+
+          {/* Tab 1: File Upload with Android Full-Document Support */}
+          {importTab === 'file' ? (
+            <div className="space-y-2">
+              <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 hover:border-indigo-500 dark:hover:border-indigo-500 rounded-2xl cursor-pointer bg-indigo-50/30 dark:bg-indigo-950/20 transition-all text-center">
+                <Upload className="w-8 h-8 text-indigo-500 mb-2" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  {importFileName ? importFileName : 'Tap here to choose JSON file'}
+                </span>
+                <span className="text-[10px] text-slate-400 mt-1">
+                  Works with Downloads, Google Drive & Android Files (.json / .txt)
+                </span>
+                {/* Accept multiple document MIME types for 100% Android & iOS support */}
+                <input
+                  type="file"
+                  accept=".json,application/json,text/plain,*/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          ) : (
+            /* Tab 2: Paste JSON Text */
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Paste Backup JSON Content:
+                </label>
+                <button
+                  type="button"
+                  onClick={handlePasteFromClipboard}
+                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                >
+                  <Clipboard className="w-3.5 h-3.5" />
+                  Paste from Clipboard
+                </button>
+              </div>
+              <textarea
+                rows={5}
+                value={pastedJson}
+                onChange={e => setPastedJson(e.target.value)}
+                placeholder='Paste your backup JSON here, e.g. {"friends": [...], "transactions": [...]}'
+                className="w-full p-3 font-mono text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          )}
+
+          {/* Live Validation & Record Count Badge */}
+          {preview && (
+            <div
+              className={`p-3 rounded-xl border text-xs font-medium flex items-center gap-2 ${
+                preview.isValid
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+              }`}
+            >
+              {preview.isValid ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+                  <span>
+                    Valid backup detected: <strong>{preview.friendsCount}</strong> friends,{' '}
+                    <strong>{preview.transactionsCount}</strong> transactions,{' '}
+                    <strong>{preview.groupsCount}</strong> groups.
+                  </span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                  <span>{preview.error}</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Import Mode Selector */}
+          <div className="space-y-2 pt-1">
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Choose Import Mode:
+            </p>
+
             <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800">
               <input
                 type="radio"
@@ -260,12 +449,25 @@ export const Settings: React.FC = () => {
             </label>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <Button variant="ghost" onClick={() => setIsImportOpen(false)}>
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setIsImportOpen(false);
+                setImportFileContent(null);
+                setImportFileName(null);
+                setPastedJson('');
+              }}
+            >
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleConfirmImport}>
-              Proceed Import
+            <Button
+              variant="primary"
+              onClick={handleConfirmImport}
+              disabled={!preview || !preview.isValid || isImporting}
+            >
+              {isImporting ? 'Importing...' : 'Confirm & Import'}
             </Button>
           </div>
         </div>
