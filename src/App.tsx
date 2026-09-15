@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
 import { AppLayout } from './components/layout/AppLayout';
@@ -150,12 +150,12 @@ export const AppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <ThemeProvider>
         <ToastProvider>
           <AppContent />
         </ToastProvider>
       </ThemeProvider>
-    </BrowserRouter>
+    </Router>
   );
 }
