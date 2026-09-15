@@ -8,8 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
 > **Live Production PWA Application**:  
-> 🌐 **[https://adityasing9.github.io/SettleHub/](https://adityasing9.github.io/SettleHub/)**  
-> *(Alternative Vercel Deployment: [https://settlemate-pwa-adityasing9-9371s-projects.vercel.app](https://settlemate-pwa-adityasing9-9371s-projects.vercel.app))*
+> 🌐 **[https://adityasing9.github.io/SettleHub/](https://adityasing9.github.io/SettleHub/)**
 
 ---
 
