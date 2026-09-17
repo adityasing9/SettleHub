@@ -20,6 +20,10 @@ export function getDefaultServerUrl(): string {
   const saved = localStorage.getItem('rcpc_server_url');
   if (saved) return saved;
   const hostname = window.location.hostname || 'localhost';
+  // If hosted on a cloud domain (Netlify, Vercel, etc.), do not append :8765 to the cloud domain!
+  if (hostname.includes('netlify.app') || hostname.includes('vercel.app') || hostname.includes('pages.dev')) {
+    return 'http://localhost:8765';
+  }
   return `http://${hostname}:${DEFAULT_SERVER_PORT}`;
 }
 
