@@ -4,7 +4,7 @@ import { useTransactions } from '../hooks/useTransactions';
 import { useFriends } from '../hooks/useFriends';
 import { useGroups } from '../hooks/useGroups';
 import { useToast } from '../context/ToastContext';
-import { Transaction } from '../types';
+import { Transaction, EXPENSE_CATEGORIES } from '../types';
 import { TransactionTable } from '../components/transactions/TransactionTable';
 import { TransactionCard } from '../components/transactions/TransactionCard';
 import { EditTransactionModal } from '../components/transactions/EditTransactionModal';
@@ -35,6 +35,7 @@ export const Transactions: React.FC<TransactionsProps> = ({ onOpenAddTransaction
   // Filters & State
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [friendFilter, setFriendFilter] = useState<string>('ALL');
   const [groupFilter, setGroupFilter] = useState<string>('ALL');
   const [dateFilter, setDateFilter] = useState<string>('ALL');
@@ -50,25 +51,30 @@ export const Transactions: React.FC<TransactionsProps> = ({ onOpenAddTransaction
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const descMatch = t.description.toLowerCase().includes(query);
+        const catMatch = t.category ? t.category.toLowerCase().includes(query) : false;
         const friendMatch = t.friendId ? friendsMap.get(t.friendId)?.name.toLowerCase().includes(query) : false;
         const groupMatch = t.groupId ? groupsMap.get(t.groupId)?.name.toLowerCase().includes(query) : false;
         const paidByMatch = t.paidById === 'ME' ? 'you'.includes(query) : friendsMap.get(t.paidById)?.name.toLowerCase().includes(query);
-        if (!descMatch && !friendMatch && !groupMatch && !paidByMatch) return false;
+        if (!descMatch && !catMatch && !friendMatch && !groupMatch && !paidByMatch) return false;
       }
 
       // 2. Type Filter
+      if (typeFilter === 'PERSONAL_EXPENSE' && t.type !== 'PERSONAL_EXPENSE') return false;
       if (typeFilter === 'PAID_BY_ME' && (t.type !== 'PAID_BY_ME' && t.paidById !== 'ME')) return false;
       if (typeFilter === 'PAID_BY_FRIEND' && (t.type !== 'PAID_BY_FRIEND' && t.paidById === 'ME')) return false;
       if (typeFilter === 'SETTLEMENT' && t.type !== 'SETTLEMENT') return false;
       if (typeFilter === 'GROUP_EXPENSE' && t.type !== 'GROUP_EXPENSE') return false;
 
-      // 3. Friend Filter
+      // 3. Category Filter
+      if (categoryFilter !== 'ALL' && (t.category || 'General') !== categoryFilter) return false;
+
+      // 4. Friend Filter
       if (friendFilter !== 'ALL' && t.friendId !== friendFilter && t.paidById !== friendFilter) return false;
 
-      // 4. Group Filter
+      // 5. Group Filter
       if (groupFilter !== 'ALL' && t.groupId !== groupFilter) return false;
 
-      // 5. Date Filter
+      // 6. Date Filter
       if (dateFilter !== 'ALL' && t.date) {
         try {
           const d = parseISO(t.date);
@@ -88,7 +94,7 @@ export const Transactions: React.FC<TransactionsProps> = ({ onOpenAddTransaction
       if (sortBy === 'AMOUNT_ASC') return a.amount - b.amount;
       return 0;
     });
-  }, [transactions, searchQuery, typeFilter, friendFilter, groupFilter, dateFilter, sortBy, friendsMap, groupsMap]);
+  }, [transactions, searchQuery, typeFilter, categoryFilter, friendFilter, groupFilter, dateFilter, sortBy, friendsMap, groupsMap]);
 
   const handleDeleteConfirm = async () => {
     if (!deletingTransaction) return;
@@ -116,6 +122,7 @@ export const Transactions: React.FC<TransactionsProps> = ({ onOpenAddTransaction
   const clearFilters = () => {
     setSearchQuery('');
     setTypeFilter('ALL');
+    setCategoryFilter('ALL');
     setFriendFilter('ALL');
     setGroupFilter('ALL');
     setDateFilter('ALL');
@@ -123,7 +130,7 @@ export const Transactions: React.FC<TransactionsProps> = ({ onOpenAddTransaction
     setSearchParams({});
   };
 
-  const hasActiveFilters = searchQuery || typeFilter !== 'ALL' || friendFilter !== 'ALL' || groupFilter !== 'ALL' || dateFilter !== 'ALL';
+  const hasActiveFilters = searchQuery || typeFilter !== 'ALL' || categoryFilter !== 'ALL' || friendFilter !== 'ALL' || groupFilter !== 'ALL' || dateFilter !== 'ALL';
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -144,9 +151,9 @@ export const Transactions: React.FC<TransactionsProps> = ({ onOpenAddTransaction
 
       {/* Filter Toolbar */}
       <div className="p-4 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
           <Input
-            placeholder="Search description, name..."
+            placeholder="Search description, category..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             leftIcon={<Search className="w-4 h-4" />}
@@ -154,10 +161,20 @@ export const Transactions: React.FC<TransactionsProps> = ({ onOpenAddTransaction
 
           <Select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
             <option value="ALL">All Types</option>
-            <option value="PAID_BY_ME">Money I Paid</option>
+            <option value="PERSONAL_EXPENSE">Personal Expenses</option>
+            <option value="PAID_BY_ME">Money I Paid (Shared)</option>
             <option value="PAID_BY_FRIEND">Money Friends Paid</option>
             <option value="GROUP_EXPENSE">Group Expenses</option>
             <option value="SETTLEMENT">Settlements</option>
+          </Select>
+
+          <Select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
+            <option value="ALL">All Categories</option>
+            {EXPENSE_CATEGORIES.map(cat => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
           </Select>
 
           <Select value={dateFilter} onChange={e => setDateFilter(e.target.value)}>

@@ -76,7 +76,9 @@ export async function importJSONBackup(
     // 2. Normalize transactions
     const normalizedTransactions: Transaction[] = rawTransactions.map((t: any) => {
       let type: TransactionType = 'PAID_BY_ME';
-      if (t.type === 'SETTLEMENT') {
+      if (t.type === 'PERSONAL_EXPENSE' || t.type === 'PERSONAL') {
+        type = 'PERSONAL_EXPENSE';
+      } else if (t.type === 'SETTLEMENT') {
         type = 'SETTLEMENT';
       } else if (t.type === 'GROUP' || t.type === 'GROUP_EXPENSE') {
         type = 'GROUP_EXPENSE';
@@ -101,6 +103,8 @@ export async function importJSONBackup(
         amount: parsedAmount,
         friendId: friendId ? String(friendId) : undefined,
         groupId: t.groupId ? String(t.groupId) : undefined,
+        category: t.category ? String(t.category) : undefined,
+        paymentMode: t.paymentMode ? String(t.paymentMode) : undefined,
         description: String(t.description || 'Transaction').trim(),
         date: t.date ? String(t.date) : t.createdAt ? String(t.createdAt) : now,
         paidById: String(paidById),
@@ -172,11 +176,13 @@ export async function exportCSV(): Promise<void> {
   const friendMap = new Map(friends.map(f => [f.id, f.name]));
   const groupMap = new Map(groups.map(g => [g.id, g.name]));
 
-  const headers = ['ID', 'Date', 'Type', 'Description', 'Amount (INR)', 'Paid By', 'Friend/Group'];
+  const headers = ['ID', 'Date', 'Type', 'Category', 'Description', 'Amount (INR)', 'Payment Mode', 'Paid By', 'Friend/Group'];
   const rows = transactions.map(t => {
-    const paidByStr = t.paidById === 'ME' ? 'Me' : friendMap.get(t.paidById) || 'Unknown';
+    const paidByStr = t.type === 'PERSONAL_EXPENSE' ? 'Me' : t.paidById === 'ME' ? 'Me' : friendMap.get(t.paidById) || 'Unknown';
     let target = '';
-    if (t.groupId) {
+    if (t.type === 'PERSONAL_EXPENSE') {
+      target = 'Personal';
+    } else if (t.groupId) {
       target = `Group: ${groupMap.get(t.groupId) || 'Group'}`;
     } else if (t.friendId) {
       target = friendMap.get(t.friendId) || 'Friend';
@@ -186,8 +192,10 @@ export async function exportCSV(): Promise<void> {
       `"${t.id}"`,
       `"${t.date}"`,
       `"${t.type}"`,
+      `"${(t.category || 'General').replace(/"/g, '""')}"`,
       `"${(t.description || '').replace(/"/g, '""')}"`,
       t.amount,
+      `"${t.paymentMode || 'UPI'}"`,
       `"${paidByStr}"`,
       `"${target}"`
     ].join(',');

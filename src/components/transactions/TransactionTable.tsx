@@ -24,13 +24,16 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   };
 
   const getTargetName = (t: Transaction) => {
+    if (t.type === 'PERSONAL_EXPENSE') {
+      return t.category ? `Personal (${t.category})` : 'Personal Expense';
+    }
     if (t.groupId) {
       return `Group: ${groupsMap.get(t.groupId)?.name || 'Group'}`;
     }
     if (t.friendId) {
       return friendsMap.get(t.friendId)?.name || 'Friend';
     }
-    return '-';
+    return 'Personal';
   };
 
   return (
@@ -49,6 +52,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
         </thead>
         <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
           {transactions.map(t => {
+            const isPersonal = t.type === 'PERSONAL_EXPENSE';
             const isSettlement = t.type === 'SETTLEMENT';
             const isPaidByMe = t.paidById === 'ME';
 
@@ -67,7 +71,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                   {t.description || <span className="italic text-slate-400">No description</span>}
                 </td>
                 <td className="py-3.5 px-4 text-slate-900 dark:text-white font-medium">
-                  {getPaidByName(t.paidById)}
+                  {isPersonal ? 'You' : getPaidByName(t.paidById)}
                 </td>
                 <td className="py-3.5 px-4 text-right font-bold text-slate-900 dark:text-white whitespace-nowrap">
                   {formatCurrency(t.amount)}
@@ -75,14 +79,22 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                 <td className="py-3.5 px-4 text-center">
                   <span
                     className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
-                      isSettlement
+                      isPersonal
+                        ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300'
+                        : isSettlement
                         ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                         : isPaidByMe
                         ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
                         : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400'
                     }`}
                   >
-                    {isSettlement ? 'Settlement' : isPaidByMe ? 'You Paid' : 'Friend Paid'}
+                    {isPersonal
+                      ? 'Personal'
+                      : isSettlement
+                      ? 'Settlement'
+                      : isPaidByMe
+                      ? 'You Paid'
+                      : 'Friend Paid'}
                   </span>
                 </td>
                 {(onEdit || onDelete) && (

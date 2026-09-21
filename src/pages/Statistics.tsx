@@ -1,33 +1,48 @@
 import React, { useMemo } from 'react';
 import { useFriends } from '../hooks/useFriends';
 import { useTransactions } from '../hooks/useTransactions';
-import { calculateOverallTotals } from '../services/financialEngine';
+import { calculateOverallTotals, calculateSpendingBreakdown } from '../services/financialEngine';
 import { formatCurrency } from '../utils/formatters';
 import { StatCard } from '../components/statistics/StatCard';
 import { SpendingChart } from '../components/statistics/SpendingChart';
 import { Card } from '../components/ui/Card';
 import { Avatar } from '../components/ui/Avatar';
 import { format, subMonths, startOfMonth, endOfMonth, parseISO } from 'date-fns';
-import { Receipt, Wallet, ArrowDownLeft, ArrowUpRight, Award, Zap, TrendingUp } from 'lucide-react';
+import {
+  Receipt,
+  Wallet,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Award,
+  Zap,
+  TrendingUp,
+  PieChart,
+  ShoppingBag,
+  Users
+} from 'lucide-react';
+
+const CATEGORY_COLORS: Record<string, { bg: string; bar: string; text: string }> = {
+  'Food & Dining': { bg: 'bg-amber-500/10', bar: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-400' },
+  'Groceries': { bg: 'bg-emerald-500/10', bar: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
+  'Shopping': { bg: 'bg-purple-500/10', bar: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
+  'Travel & Fuel': { bg: 'bg-blue-500/10', bar: 'bg-blue-500', text: 'text-blue-600 dark:text-blue-400' },
+  'Bills & Utilities': { bg: 'bg-rose-500/10', bar: 'bg-rose-500', text: 'text-rose-600 dark:text-rose-400' },
+  'Entertainment': { bg: 'bg-pink-500/10', bar: 'bg-pink-500', text: 'text-pink-600 dark:text-pink-400' },
+  'Health & Fitness': { bg: 'bg-teal-500/10', bar: 'bg-teal-500', text: 'text-teal-600 dark:text-teal-400' },
+  'Rent & Housing': { bg: 'bg-indigo-500/10', bar: 'bg-indigo-500', text: 'text-indigo-600 dark:text-indigo-400' },
+  'Education': { bg: 'bg-cyan-500/10', bar: 'bg-cyan-500', text: 'text-cyan-600 dark:text-cyan-400' },
+  'General': { bg: 'bg-slate-500/10', bar: 'bg-slate-500', text: 'text-slate-600 dark:text-slate-400' }
+};
 
 export const Statistics: React.FC = () => {
   const { activeFriends } = useFriends();
   const { transactions } = useTransactions();
 
   const totals = calculateOverallTotals(activeFriends, transactions);
+  const spendingBreakdown = useMemo(() => calculateSpendingBreakdown(transactions), [transactions]);
 
-  // Total spent (where I paid or my share in group expenses)
-  const totalMoneySpent = useMemo(() => {
-    let sum = 0;
-    for (const t of transactions) {
-      if (t.type === 'PAID_BY_ME') sum += t.amount;
-      else if (t.type === 'GROUP_EXPENSE' && t.participants) {
-        const me = t.participants.find(p => p.friendId === 'ME');
-        if (me) sum += me.shareAmount;
-      }
-    }
-    return Math.round(sum * 100) / 100;
-  }, [transactions]);
+  // Total spent (including personal expenses, out of pocket and shared share)
+  const totalMoneySpent = spendingBreakdown.totalSpent;
 
   // Highest transaction
   const highestTransaction = useMemo(() => {
@@ -80,8 +95,9 @@ export const Statistics: React.FC = () => {
         try {
           const tDate = parseISO(t.date);
           if (tDate >= start && tDate <= end) {
-            if (t.type === 'PAID_BY_ME') amount += t.amount;
-            else if (t.type === 'GROUP_EXPENSE' && t.participants) {
+            if (t.type === 'PAID_BY_ME' || t.type === 'PERSONAL_EXPENSE') {
+              amount += t.amount;
+            } else if (t.type === 'GROUP_EXPENSE' && t.participants) {
               const me = t.participants.find(p => p.friendId === 'ME');
               if (me) amount += me.shareAmount;
             }
@@ -100,7 +116,7 @@ export const Statistics: React.FC = () => {
       <div>
         <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">Statistics & Insights</h2>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          Overview of total transaction activity, balances, and monthly spending trends
+          Overview of personal expenses, shared settlements, categories, and monthly trends
         </p>
       </div>
 
@@ -109,7 +125,7 @@ export const Statistics: React.FC = () => {
         <StatCard
           title="Total Transactions"
           value={transactions.length.toString()}
-          subtitle="Recorded transactions"
+          subtitle="All recorded expenses"
           icon={<Receipt className="w-5 h-5" />}
           color="indigo"
         />
@@ -117,7 +133,7 @@ export const Statistics: React.FC = () => {
         <StatCard
           title="Total Spent"
           value={formatCurrency(totalMoneySpent)}
-          subtitle="Out of pocket & shared"
+          subtitle="Personal + Out-of-pocket"
           icon={<TrendingUp className="w-5 h-5" />}
           color="amber"
         />
@@ -138,6 +154,98 @@ export const Statistics: React.FC = () => {
           color="rose"
         />
       </div>
+
+      {/* Personal vs Shared Spending Split */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Card className="p-5 bg-gradient-to-br from-purple-50/70 to-indigo-50/40 dark:from-purple-950/30 dark:to-slate-900 border-purple-200/70 dark:border-purple-900/50">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-purple-800 dark:text-purple-300 uppercase tracking-wider">
+              Personal Expenses
+            </span>
+            <div className="p-2 rounded-xl bg-purple-600 text-white shadow-sm">
+              <ShoppingBag className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-purple-900 dark:text-purple-100 mt-2">
+            {formatCurrency(spendingBreakdown.personalSpent)}
+          </p>
+          <p className="text-xs text-purple-600 dark:text-purple-400 mt-1 font-medium">
+            100% your own personal expenses
+          </p>
+        </Card>
+
+        <Card className="p-5 bg-gradient-to-br from-blue-50/70 to-cyan-50/40 dark:from-blue-950/30 dark:to-slate-900 border-blue-200/70 dark:border-blue-900/50">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wider">
+              Shared / Friends Expenses
+            </span>
+            <div className="p-2 rounded-xl bg-blue-600 text-white shadow-sm">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-blue-900 dark:text-blue-100 mt-2">
+            {formatCurrency(spendingBreakdown.sharedSpent)}
+          </p>
+          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
+            Group splits & paid for friends
+          </p>
+        </Card>
+      </div>
+
+      {/* Category Spending Breakdown */}
+      {spendingBreakdown.categories.length > 0 && (
+        <Card className="p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+                <PieChart className="w-4 h-4" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                Category Spending Breakdown
+              </h3>
+            </div>
+            <span className="text-xs text-slate-400 font-medium">
+              {spendingBreakdown.categories.length} {spendingBreakdown.categories.length === 1 ? 'Category' : 'Categories'}
+            </span>
+          </div>
+
+          <div className="space-y-3.5 pt-1">
+            {spendingBreakdown.categories.map(cat => {
+              const style = CATEGORY_COLORS[cat.category] || CATEGORY_COLORS['General'];
+              return (
+                <div key={cat.category} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${style.bar}`} />
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                        {cat.category}
+                      </span>
+                      <span className="text-slate-400 text-[11px]">
+                        ({cat.count} {cat.count === 1 ? 'txn' : 'txns'})
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-extrabold text-slate-900 dark:text-white">
+                        {formatCurrency(cat.amount)}
+                      </span>
+                      <span className={`font-bold w-10 text-right ${style.text}`}>
+                        {cat.percentage}%
+                      </span>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${style.bar}`}
+                      style={{ width: `${Math.max(cat.percentage, 2)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Monthly Chart */}
       <SpendingChart data={monthlyData} />

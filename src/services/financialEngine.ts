@@ -213,3 +213,78 @@ export function calculateSuggestedSettlements(
 
   return suggestions;
 }
+
+export interface CategorySpending {
+  category: string;
+  amount: number;
+  percentage: number;
+  count: number;
+}
+
+export interface SpendingBreakdown {
+  totalSpent: number;
+  personalSpent: number;
+  sharedSpent: number;
+  categories: CategorySpending[];
+}
+
+/**
+ * Computes category breakdown and personal vs shared spending analysis.
+ */
+export function calculateSpendingBreakdown(transactions: Transaction[]): SpendingBreakdown {
+  let personalSpent = 0;
+  let sharedSpent = 0;
+  const categoryMap: Record<string, { amount: number; count: number }> = {};
+
+  for (const t of transactions) {
+    let myAmount = 0;
+    const cat = t.category?.trim() || 'General';
+
+    if (t.type === 'PERSONAL_EXPENSE') {
+      myAmount = t.amount;
+      personalSpent += myAmount;
+    } else if (t.type === 'PAID_BY_ME') {
+      myAmount = t.amount;
+      sharedSpent += myAmount;
+    } else if (t.type === 'GROUP_EXPENSE' && t.participants) {
+      const me = t.participants.find(p => p.friendId === 'ME');
+      if (me) {
+        myAmount = me.shareAmount;
+        sharedSpent += myAmount;
+      }
+    }
+
+    if (myAmount > 0) {
+      if (!categoryMap[cat]) {
+        categoryMap[cat] = { amount: 0, count: 0 };
+      }
+      categoryMap[cat].amount += myAmount;
+      categoryMap[cat].count += 1;
+    }
+  }
+
+  personalSpent = Math.round(personalSpent * 100) / 100;
+  sharedSpent = Math.round(sharedSpent * 100) / 100;
+  const totalSpent = Math.round((personalSpent + sharedSpent) * 100) / 100;
+
+  const categories: CategorySpending[] = Object.entries(categoryMap)
+    .map(([category, data]) => {
+      const amount = Math.round(data.amount * 100) / 100;
+      const percentage = totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0;
+      return {
+        category,
+        amount,
+        percentage,
+        count: data.count
+      };
+    })
+    .sort((a, b) => b.amount - a.amount);
+
+  return {
+    totalSpent,
+    personalSpent,
+    sharedSpent,
+    categories
+  };
+}
+

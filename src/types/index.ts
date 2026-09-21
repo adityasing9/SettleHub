@@ -1,6 +1,32 @@
-export type TransactionType = 'PAID_BY_ME' | 'PAID_BY_FRIEND' | 'SETTLEMENT' | 'GROUP_EXPENSE';
+export type TransactionType = 'PAID_BY_ME' | 'PAID_BY_FRIEND' | 'SETTLEMENT' | 'GROUP_EXPENSE' | 'PERSONAL_EXPENSE';
 
 export type SplitType = 'EQUAL' | 'CUSTOM';
+
+export const EXPENSE_CATEGORIES = [
+  'Food & Dining',
+  'Groceries',
+  'Shopping',
+  'Travel & Fuel',
+  'Bills & Utilities',
+  'Entertainment',
+  'Health & Fitness',
+  'Rent & Housing',
+  'Education',
+  'General'
+] as const;
+
+export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];
+
+export const PAYMENT_MODES = [
+  'UPI',
+  'Cash',
+  'Credit Card',
+  'Debit Card',
+  'Net Banking',
+  'Other'
+] as const;
+
+export type PaymentMode = typeof PAYMENT_MODES[number];
 
 export interface GroupParticipantShare {
   friendId: string; // friendId or 'ME'
@@ -24,6 +50,8 @@ export interface Transaction {
   amount: number;
   friendId?: string; // For 1-on-1 transactions or settlements
   groupId?: string; // For group expenses
+  category?: string; // For personal or categorized expenses
+  paymentMode?: string; // UPI, Cash, Card, etc.
   description: string;
   date: string; // ISO string for date/time
   paidById: string; // friendId or 'ME'

@@ -4,7 +4,8 @@ import {
   calculateOverallTotals,
   calculateEqualSplit,
   validateSplit,
-  calculateSuggestedSettlements
+  calculateSuggestedSettlements,
+  calculateSpendingBreakdown
 } from './financialEngine';
 import { Transaction, Friend } from '../types';
 
@@ -222,5 +223,96 @@ describe('Financial Engine Tests', () => {
       .filter(s => s.toId === 'ME')
       .reduce((sum, s) => sum + s.amount, 0);
     expect(totalToMe).toBe(900);
+  });
+
+  it('should isolate PERSONAL_EXPENSE from friend balances and overall debts', () => {
+    const friendId = 'friend_rahul';
+    const friends: Friend[] = [
+      { id: friendId, name: 'Rahul', createdAt: '2026-01-01', updatedAt: '2026-01-01' }
+    ];
+
+    const transactions: Transaction[] = [
+      {
+        id: 'p1',
+        type: 'PERSONAL_EXPENSE',
+        amount: 2500,
+        category: 'Groceries',
+        paidById: 'ME',
+        description: 'Supermarket weekly groceries',
+        date: '2026-09-15T10:00:00Z',
+        createdAt: '2026-09-15T10:00:00Z',
+        updatedAt: '2026-09-15T10:00:00Z'
+      },
+      {
+        id: 't1',
+        type: 'PAID_BY_ME',
+        amount: 500,
+        friendId,
+        paidById: 'ME',
+        description: 'Movie ticket',
+        date: '2026-09-15T14:00:00Z',
+        createdAt: '2026-09-15T14:00:00Z',
+        updatedAt: '2026-09-15T14:00:00Z'
+      }
+    ];
+
+    // Friend balance should ONLY reflect the ₹500 paid for Rahul
+    const balance = calculateFriendBalance(friendId, 'Rahul', transactions);
+    expect(balance.totalPaidByMe).toBe(500);
+    expect(balance.totalPaidByFriend).toBe(0);
+    expect(balance.netBalance).toBe(500);
+
+    const totals = calculateOverallTotals(friends, transactions);
+    expect(totals.totalReceivable).toBe(500);
+    expect(totals.totalPayable).toBe(0);
+  });
+
+  it('should accurately calculate spending breakdown by category and type', () => {
+    const transactions: Transaction[] = [
+      {
+        id: 'p1',
+        type: 'PERSONAL_EXPENSE',
+        amount: 1500,
+        category: 'Groceries',
+        paidById: 'ME',
+        description: 'Groceries',
+        date: '2026-09-15T10:00:00Z',
+        createdAt: '2026-09-15T10:00:00Z',
+        updatedAt: '2026-09-15T10:00:00Z'
+      },
+      {
+        id: 'p2',
+        type: 'PERSONAL_EXPENSE',
+        amount: 500,
+        category: 'Food & Dining',
+        paidById: 'ME',
+        description: 'Dinner',
+        date: '2026-09-15T12:00:00Z',
+        createdAt: '2026-09-15T12:00:00Z',
+        updatedAt: '2026-09-15T12:00:00Z'
+      },
+      {
+        id: 't1',
+        type: 'PAID_BY_ME',
+        amount: 1000,
+        category: 'Shopping',
+        friendId: 'f1',
+        paidById: 'ME',
+        description: 'Mall shopping',
+        date: '2026-09-15T14:00:00Z',
+        createdAt: '2026-09-15T14:00:00Z',
+        updatedAt: '2026-09-15T14:00:00Z'
+      }
+    ];
+
+    const breakdown = calculateSpendingBreakdown(transactions);
+    expect(breakdown.personalSpent).toBe(2000); // 1500 + 500
+    expect(breakdown.sharedSpent).toBe(1000);
+    expect(breakdown.totalSpent).toBe(3000);
+    expect(breakdown.categories.length).toBe(3);
+
+    const groceries = breakdown.categories.find(c => c.category === 'Groceries');
+    expect(groceries?.amount).toBe(1500);
+    expect(groceries?.percentage).toBe(50); // 1500 / 3000 = 50%
   });
 });

@@ -8,8 +8,8 @@ import { useGroups } from '../../hooks/useGroups';
 import { useTransactions } from '../../hooks/useTransactions';
 import { useToast } from '../../context/ToastContext';
 import { calculateEqualSplit, validateSplit } from '../../services/financialEngine';
-import { TransactionType, SplitType } from '../../types';
-import { IndianRupee, Calendar, FileText, User, Users, PlusCircle } from 'lucide-react';
+import { TransactionType, SplitType, EXPENSE_CATEGORIES, PAYMENT_MODES } from '../../types';
+import { IndianRupee, Calendar, FileText, User, Users, PlusCircle, Wallet, Tag, CreditCard } from 'lucide-react';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -19,7 +19,7 @@ interface AddTransactionModalProps {
   onOpenAddFriend?: () => void;
 }
 
-const commonCategories = ['Dinner', 'Lunch', 'Cab', 'Movie', 'Coffee', 'Groceries', 'College project', 'Travel', 'Rent'];
+const quickCategorySuggestions = ['Dinner', 'Lunch', 'Cab', 'Movie', 'Coffee', 'Groceries', 'Shopping', 'Fuel', 'Rent'];
 
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   isOpen,
@@ -33,12 +33,14 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const { addTransaction } = useTransactions();
   const { showToast } = useToast();
 
-  const [mode, setMode] = useState<'INDIVIDUAL' | 'GROUP'>('INDIVIDUAL');
+  const [mode, setMode] = useState<'PERSONAL' | 'INDIVIDUAL' | 'GROUP'>('PERSONAL');
   const [friendId, setFriendId] = useState('');
   const [groupId, setGroupId] = useState('');
   const [paidBy, setPaidBy] = useState<'ME' | string>('ME');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<string>('Food & Dining');
+  const [paymentMode, setPaymentMode] = useState<string>('UPI');
   const [dateTime, setDateTime] = useState('');
 
   // Group split state
@@ -66,13 +68,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         setMode('INDIVIDUAL');
         setFriendId(defaultFriendId);
       } else {
-        setMode('INDIVIDUAL');
-        setFriendId(prev => {
-          if (prev && activeFriends.some(f => f.id === prev)) {
-            return prev;
-          }
-          return activeFriends.length > 0 ? activeFriends[0].id : '';
-        });
+        setMode('PERSONAL');
+        if (activeFriends.length > 0) {
+          setFriendId(activeFriends[0].id);
+        }
       }
     }
   }, [isOpen, defaultFriendId, defaultGroupId]);
@@ -122,11 +121,16 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       return;
     }
 
-    let type: TransactionType = 'PAID_BY_ME';
+    let type: TransactionType = 'PERSONAL_EXPENSE';
     let participants;
+    let finalPaidById = 'ME';
 
-    if (mode === 'GROUP') {
+    if (mode === 'PERSONAL') {
+      type = 'PERSONAL_EXPENSE';
+      finalPaidById = 'ME';
+    } else if (mode === 'GROUP') {
       type = 'GROUP_EXPENSE';
+      finalPaidById = paidBy;
       if (selectedParticipants.length === 0) {
         setError('Please select at least one participant.');
         return;
@@ -151,6 +155,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       }
     } else {
       type = paidBy === 'ME' ? 'PAID_BY_ME' : 'PAID_BY_FRIEND';
+      finalPaidById = paidBy;
     }
 
     try {
@@ -162,17 +167,19 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         amount: parsedAmount,
         friendId: mode === 'INDIVIDUAL' ? friendId : undefined,
         groupId: mode === 'GROUP' ? groupId : undefined,
-        description: description.trim() || 'Expense',
+        category,
+        paymentMode,
+        description: description.trim() || (mode === 'PERSONAL' ? category : 'Expense'),
         date: dateTime ? new Date(dateTime).toISOString() : new Date().toISOString(),
-        paidById: paidBy,
+        paidById: finalPaidById,
         participants,
         splitType: mode === 'GROUP' ? splitType : undefined
       });
 
       showToast({
         type: 'success',
-        title: 'Transaction Recorded',
-        description: `Added ${description || 'expense'} of ₹${parsedAmount}`
+        title: mode === 'PERSONAL' ? 'Personal Expense Added' : 'Transaction Recorded',
+        description: `Added ${description || category || 'expense'} of ₹${parsedAmount}`
       });
 
       // Reset
@@ -189,29 +196,43 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Add Transaction" maxWidth="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Mode Selector Tabs */}
-        <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-semibold text-center">
+        {/* Mode Selector Tabs (3 Tabs) */}
+        <div className="grid grid-cols-3 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-semibold text-center gap-1">
+          <button
+            type="button"
+            onClick={() => setMode('PERSONAL')}
+            className={`py-2 px-1 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+              mode === 'PERSONAL'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Wallet className="w-3.5 h-3.5" />
+            <span>Personal</span>
+          </button>
           <button
             type="button"
             onClick={() => setMode('INDIVIDUAL')}
-            className={`py-2 rounded-lg transition-all ${
+            className={`py-2 px-1 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
               mode === 'INDIVIDUAL'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            Individual Expense
+            <User className="w-3.5 h-3.5" />
+            <span>Friend Split</span>
           </button>
           <button
             type="button"
             onClick={() => setMode('GROUP')}
-            className={`py-2 rounded-lg transition-all ${
+            className={`py-2 px-1 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
               mode === 'GROUP'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            Group Expense
+            <Users className="w-3.5 h-3.5" />
+            <span>Group Split</span>
           </button>
         </div>
 
@@ -221,8 +242,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         )}
 
-        {/* Selection Field */}
-        {mode === 'INDIVIDUAL' ? (
+        {/* Friend Selector (Only for INDIVIDUAL) */}
+        {mode === 'INDIVIDUAL' && (
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
@@ -267,7 +288,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               </Select>
             )}
           </div>
-        ) : (
+        )}
+
+        {/* Group Selector (Only for GROUP) */}
+        {mode === 'GROUP' && (
           <div>
             <Select
               label="Select Group *"
@@ -284,46 +308,48 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         )}
 
-        {/* Who Paid? */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
-            Who paid?
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setPaidBy('ME')}
-              className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                paidBy === 'ME'
-                  ? 'bg-indigo-50 border-indigo-600 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-500 dark:text-indigo-300'
-                  : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
-              }`}
-            >
-              I paid
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (mode === 'INDIVIDUAL') {
-                  setPaidBy(friendId);
-                } else if (groupId) {
-                  const g = groups.find(item => item.id === groupId);
-                  const firstFriend = g?.members.find(m => m !== 'ME');
-                  if (firstFriend) setPaidBy(firstFriend);
-                }
-              }}
-              className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                paidBy !== 'ME'
-                  ? 'bg-indigo-50 border-indigo-600 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-500 dark:text-indigo-300'
-                  : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
-              }`}
-            >
-              {mode === 'INDIVIDUAL'
-                ? activeFriends.find(f => f.id === friendId)?.name || 'Friend' + ' paid'
-                : 'Friend paid'}
-            </button>
+        {/* Who Paid? (Only for INDIVIDUAL or GROUP) */}
+        {mode !== 'PERSONAL' && (
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
+              Who paid?
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setPaidBy('ME')}
+                className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
+                  paidBy === 'ME'
+                    ? 'bg-indigo-50 border-indigo-600 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-500 dark:text-indigo-300'
+                    : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                }`}
+              >
+                I paid
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (mode === 'INDIVIDUAL') {
+                    setPaidBy(friendId);
+                  } else if (groupId) {
+                    const g = groups.find(item => item.id === groupId);
+                    const firstFriend = g?.members.find(m => m !== 'ME');
+                    if (firstFriend) setPaidBy(firstFriend);
+                  }
+                }}
+                className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
+                  paidBy !== 'ME'
+                    ? 'bg-indigo-50 border-indigo-600 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-500 dark:text-indigo-300'
+                    : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                }`}
+              >
+                {mode === 'INDIVIDUAL'
+                  ? (activeFriends.find(f => f.id === friendId)?.name || 'Friend') + ' paid'
+                  : 'Friend paid'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Amount */}
         <Input
@@ -339,24 +365,59 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           leftIcon={<IndianRupee className="w-4 h-4 text-slate-400" />}
         />
 
+        {/* Category & Payment Method */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
+              Category
+            </label>
+            <Select
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+            >
+              {EXPENSE_CATEGORIES.map(cat => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
+              Payment Method
+            </label>
+            <Select
+              value={paymentMode}
+              onChange={e => setPaymentMode(e.target.value)}
+            >
+              {PAYMENT_MODES.map(pm => (
+                <option key={pm} value={pm}>
+                  {pm}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+
         {/* Description */}
         <div>
           <Input
-            label="Description *"
-            placeholder="e.g. Dinner, Cab, Groceries"
+            label="Description / Note"
+            placeholder={mode === 'PERSONAL' ? `e.g. ${category}` : 'e.g. Dinner, Cab, Groceries'}
             value={description}
             onChange={e => setDescription(e.target.value)}
             leftIcon={<FileText className="w-4 h-4 text-slate-400" />}
           />
           <div className="flex flex-wrap gap-1.5 mt-2">
-            {commonCategories.map(cat => (
+            {quickCategorySuggestions.map(sugg => (
               <button
-                key={cat}
+                key={sugg}
                 type="button"
-                onClick={() => setDescription(cat)}
+                onClick={() => setDescription(sugg)}
                 className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
               >
-                {cat}
+                {sugg}
               </button>
             ))}
           </div>

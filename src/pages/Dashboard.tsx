@@ -42,6 +42,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const totals = calculateOverallTotals(activeFriends, transactions);
 
+  // Calculate total personal expenses
+  const personalSpent = React.useMemo(() => {
+    return Math.round(
+      transactions
+        .filter(t => t.type === 'PERSONAL_EXPENSE')
+        .reduce((sum, t) => sum + t.amount, 0) * 100
+    ) / 100;
+  }, [transactions]);
+
   // Categorize friends into Who Owes Me vs Who I Owe
   const whoOwesMe = totals.friendBalances.filter(fb => fb.netBalance > 0);
   const whoIOwe = totals.friendBalances.filter(fb => fb.netBalance < 0);
@@ -62,14 +71,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="space-y-2 flex-1">
               <h2 className="text-xl font-extrabold">Welcome to SettleMate!</h2>
               <p className="text-xs sm:text-sm text-indigo-100 max-w-xl leading-relaxed">
-                Track shared expenses with friends, split trip bills, and know exactly who owes whom. Get started by adding your first friend.
+                Track your personal spending and split shared expenses with friends in one unified dashboard. Know exactly where your money goes.
               </p>
               <div className="flex flex-wrap gap-3 pt-2">
                 <Button onClick={onOpenAddFriend} variant="secondary" size="sm">
                   + Add First Friend
                 </Button>
                 <Button onClick={onOpenAddTransaction} variant="primary" size="sm" className="bg-white text-indigo-700 hover:bg-slate-100">
-                  + Add First Transaction
+                  + Add First Expense
                 </Button>
               </div>
             </div>
@@ -77,8 +86,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </Card>
       )}
 
-      {/* Top 3 Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Top 4 Summary Cards (Receivables, Payables, Net Balance, Personal Expenses) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Receivable */}
         <Card className="p-5 bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/40 dark:to-slate-900 border-emerald-200/80 dark:border-emerald-900/40">
           <div className="flex items-center justify-between">
@@ -119,7 +128,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <Card className="p-5 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/40 dark:to-slate-900 border-indigo-200/80 dark:border-indigo-900/40">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">
-              Net Balance
+              Net Friend Balance
             </span>
             <div className="p-2 rounded-xl bg-indigo-600 text-white shadow-sm">
               <Wallet className="w-4 h-4" />
@@ -137,6 +146,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <p className="text-[11px] text-indigo-700 dark:text-indigo-400 mt-1 font-semibold">
             {totals.netOverallBalance >= 0 ? 'Overall Positive' : 'Overall Deficit'}
           </p>
+        </Card>
+
+        {/* Personal Expenses */}
+        <Card
+          onClick={() => navigate('/transactions')}
+          className="p-5 bg-gradient-to-br from-purple-50 to-fuchsia-50/50 dark:from-purple-950/40 dark:to-slate-900 border-purple-200/80 dark:border-purple-900/40 cursor-pointer hover:shadow-md transition-all group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-purple-800 dark:text-purple-300 uppercase tracking-wider">
+              Personal Expenses
+            </span>
+            <div className="p-2 rounded-xl bg-purple-600 text-white shadow-sm group-hover:scale-105 transition-transform">
+              <Receipt className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl sm:text-3xl font-black text-purple-950 dark:text-purple-100 mt-2">
+            {formatCurrency(personalSpent)}
+          </p>
+          <div className="flex items-center justify-between text-[11px] text-purple-700 dark:text-purple-400 mt-1 font-semibold">
+            <span>Tracked personal spending</span>
+            <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          </div>
         </Card>
       </div>
 

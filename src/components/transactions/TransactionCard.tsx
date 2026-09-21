@@ -2,7 +2,7 @@ import React from 'react';
 import { Transaction, Friend, Group } from '../../types';
 import { formatCurrency, formatDateTime } from '../../utils/formatters';
 import { Card } from '../ui/Card';
-import { ArrowUpRight, ArrowDownLeft, CheckCircle, Users, Edit2, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, CheckCircle, Users, Edit2, Trash2, Wallet, Tag } from 'lucide-react';
 
 interface TransactionCardProps {
   transaction: Transaction;
@@ -25,6 +25,9 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
   };
 
   const getTargetName = () => {
+    if (transaction.type === 'PERSONAL_EXPENSE') {
+      return transaction.category || 'Personal';
+    }
     if (transaction.groupId) {
       return groupsMap.get(transaction.groupId)?.name || 'Group';
     }
@@ -38,7 +41,11 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
   let typeLabel = 'Paid';
   let badgeColor = 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400';
 
-  if (transaction.type === 'SETTLEMENT') {
+  if (transaction.type === 'PERSONAL_EXPENSE') {
+    icon = <Wallet className="w-4 h-4 text-purple-600 dark:text-purple-400" />;
+    typeLabel = 'Personal';
+    badgeColor = 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50';
+  } else if (transaction.type === 'SETTLEMENT') {
     icon = <CheckCircle className="w-4 h-4 text-slate-500" />;
     typeLabel = 'Settlement';
     badgeColor = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
@@ -61,10 +68,32 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
             <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
               {transaction.description || 'Transaction'}
             </h4>
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              <span>{getPaidByName(transaction.paidById)}</span>
-              <span>•</span>
-              <span className="truncate">{getTargetName()}</span>
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {transaction.type === 'PERSONAL_EXPENSE' ? (
+                <>
+                  <span className="font-semibold text-purple-700 dark:text-purple-300">
+                    {transaction.category || 'General'}
+                  </span>
+                  {transaction.paymentMode && (
+                    <>
+                      <span>•</span>
+                      <span>{transaction.paymentMode}</span>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span>{getPaidByName(transaction.paidById)}</span>
+                  <span>•</span>
+                  <span className="truncate">{getTargetName()}</span>
+                  {transaction.category && (
+                    <>
+                      <span>•</span>
+                      <span className="text-slate-400">{transaction.category}</span>
+                    </>
+                  )}
+                </>
+              )}
             </div>
             <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
               {formatDateTime(transaction.date)}

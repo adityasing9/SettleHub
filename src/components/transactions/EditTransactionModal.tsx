@@ -6,7 +6,7 @@ import { Button } from '../ui/Button';
 import { useTransactions } from '../../hooks/useTransactions';
 import { useFriends } from '../../hooks/useFriends';
 import { useToast } from '../../context/ToastContext';
-import { Transaction } from '../../types';
+import { Transaction, EXPENSE_CATEGORIES, PAYMENT_MODES } from '../../types';
 import { IndianRupee, FileText, Calendar } from 'lucide-react';
 
 interface EditTransactionModalProps {
@@ -27,6 +27,8 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [paidBy, setPaidBy] = useState('ME');
+  const [category, setCategory] = useState('Food & Dining');
+  const [paymentMode, setPaymentMode] = useState('UPI');
   const [dateTime, setDateTime] = useState('');
   const [error, setError] = useState('');
 
@@ -34,7 +36,9 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
     if (transaction) {
       setDescription(transaction.description);
       setAmount(transaction.amount.toString());
-      setPaidBy(transaction.paidById);
+      setPaidBy(transaction.paidById || 'ME');
+      setCategory(transaction.category || 'General');
+      setPaymentMode(transaction.paymentMode || 'UPI');
       try {
         const d = new Date(transaction.date);
         const localISO = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
@@ -66,8 +70,10 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
       await updateTransaction(transaction.id, {
         description: description.trim(),
         amount: parsedAmount,
-        paidById: paidBy,
+        paidById: transaction.type === 'PERSONAL_EXPENSE' ? 'ME' : paidBy,
         type: updatedType,
+        category,
+        paymentMode,
         date: dateTime ? new Date(dateTime).toISOString() : transaction.date
       });
 
@@ -103,6 +109,40 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           leftIcon={<IndianRupee className="w-4 h-4 text-slate-400" />}
         />
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
+              Category
+            </label>
+            <Select
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+            >
+              {EXPENSE_CATEGORIES.map(cat => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
+              Payment Method
+            </label>
+            <Select
+              value={paymentMode}
+              onChange={e => setPaymentMode(e.target.value)}
+            >
+              {PAYMENT_MODES.map(pm => (
+                <option key={pm} value={pm}>
+                  {pm}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+
         <Input
           label="Description *"
           value={description}
@@ -110,7 +150,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           leftIcon={<FileText className="w-4 h-4 text-slate-400" />}
         />
 
-        {transaction.type !== 'GROUP_EXPENSE' && (
+        {transaction.type !== 'GROUP_EXPENSE' && transaction.type !== 'PERSONAL_EXPENSE' && (
           <Select
             label="Paid By *"
             value={paidBy}
