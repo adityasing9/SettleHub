@@ -23,10 +23,14 @@ import {
   Clipboard,
   CheckCircle2,
   AlertCircle,
-  QrCode
+  QrCode,
+  Monitor,
+  Sparkles
 } from 'lucide-react';
 import { QRExportModal } from '../components/export/QRExportModal';
 import { QRImportModal } from '../components/export/QRImportModal';
+import { PCReceiverModal } from '../components/sync/PCReceiverModal';
+import { PhoneSenderModal } from '../components/sync/PhoneSenderModal';
 
 export const Settings: React.FC = () => {
   const { theme, setTheme } = useTheme();
@@ -42,6 +46,8 @@ export const Settings: React.FC = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [isQRExportOpen, setIsQRExportOpen] = useState(false);
   const [isQRImportOpen, setIsQRImportOpen] = useState(false);
+  const [isPCReceiverOpen, setIsPCReceiverOpen] = useState(false);
+  const [isPhoneSenderOpen, setIsPhoneSenderOpen] = useState(false);
 
   const activeJsonContent = importTab === 'file' ? importFileContent : pastedJson;
 
@@ -237,11 +243,50 @@ export const Settings: React.FC = () => {
           </p>
         </div>
 
-        {/* QR Code Sync */}
+        {/* WhatsApp Web Style Sync */}
+        <div className="p-4 bg-gradient-to-br from-emerald-500/10 via-indigo-500/10 to-purple-500/10 dark:from-emerald-950/40 dark:via-indigo-950/40 dark:to-purple-950/40 rounded-2xl border border-emerald-200/70 dark:border-emerald-800/60 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-200 text-xs font-bold">
+              <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>WhatsApp Web-Style Sync (Phone ➔ PC Link)</span>
+            </div>
+            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/80 text-emerald-700 dark:text-emerald-300">
+              Instant P2P
+            </span>
+          </div>
+
+          <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+            Show a QR code on your PC monitor, then point your phone camera at the PC screen to beam data wirelessly.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+            <Button
+              onClick={() => setIsPCReceiverOpen(true)}
+              variant="primary"
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"
+            >
+              <Monitor className="w-4 h-4" />
+              <span>I'm on PC: Show QR on Monitor</span>
+            </Button>
+
+            <Button
+              onClick={() => setIsPhoneSenderOpen(true)}
+              variant="outline"
+              size="sm"
+              className="border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
+            >
+              <Smartphone className="w-4 h-4" />
+              <span>I'm on Phone: Scan PC Screen</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* QR Code Optical Transfer */}
         <div className="p-3.5 bg-indigo-50/60 dark:bg-indigo-950/40 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 space-y-2.5">
           <div className="flex items-center gap-2 text-indigo-900 dark:text-indigo-200 text-xs font-bold">
             <QrCode className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            <span>Wireless QR Code Transfer (Phone-to-Phone)</span>
+            <span>Direct QR Code Transfer (Phone-to-Phone)</span>
           </div>
           <p className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80">
             Export all or selected groups/friends as a QR code and scan directly with another device's camera.
@@ -533,6 +578,23 @@ export const Settings: React.FC = () => {
             description: 'New data has been successfully imported from QR code.'
           });
         }}
+      />
+
+      <PCReceiverModal
+        isOpen={isPCReceiverOpen}
+        onClose={() => setIsPCReceiverOpen(false)}
+        onSyncComplete={() => {
+          showToast({
+            type: 'success',
+            title: 'PC Synced',
+            description: 'Data successfully received from your phone.'
+          });
+        }}
+      />
+
+      <PhoneSenderModal
+        isOpen={isPhoneSenderOpen}
+        onClose={() => setIsPhoneSenderOpen(false)}
       />
     </div>
   );
