@@ -13,7 +13,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Button } from '../components/ui/Button';
-import { Search, Filter, ArrowUpDown, Receipt, Plus, X } from 'lucide-react';
+import { PersonalExpenseReportModal } from '../components/reports/PersonalExpenseReportModal';
+import { Search, Filter, ArrowUpDown, Receipt, Plus, X, FileBarChart } from 'lucide-react';
 import { isToday, isThisWeek, isThisMonth, parseISO } from 'date-fns';
 
 interface TransactionsProps {
@@ -44,6 +45,7 @@ export const Transactions: React.FC<TransactionsProps> = ({ onOpenAddTransaction
   // Modals & Dialogs
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
@@ -58,8 +60,8 @@ export const Transactions: React.FC<TransactionsProps> = ({ onOpenAddTransaction
         if (!descMatch && !catMatch && !friendMatch && !groupMatch && !paidByMatch) return false;
       }
 
-      // 2. Type Filter
-      if (typeFilter === 'PERSONAL_EXPENSE' && t.type !== 'PERSONAL_EXPENSE') return false;
+      // 2. Type Filter (Includes settlements paid by ME under personal expenses)
+      if (typeFilter === 'PERSONAL_EXPENSE' && t.type !== 'PERSONAL_EXPENSE' && !(t.type === 'SETTLEMENT' && t.paidById === 'ME')) return false;
       if (typeFilter === 'PAID_BY_ME' && (t.type !== 'PAID_BY_ME' && t.paidById !== 'ME')) return false;
       if (typeFilter === 'PAID_BY_FRIEND' && (t.type !== 'PAID_BY_FRIEND' && t.paidById === 'ME')) return false;
       if (typeFilter === 'SETTLEMENT' && t.type !== 'SETTLEMENT') return false;
@@ -143,10 +145,20 @@ export const Transactions: React.FC<TransactionsProps> = ({ onOpenAddTransaction
           </p>
         </div>
 
-        <Button onClick={onOpenAddTransaction} variant="primary">
-          <Plus className="w-4 h-4" />
-          <span>Add Expense</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setIsReportModalOpen(true)}
+            variant="secondary"
+          >
+            <FileBarChart className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <span>Report</span>
+          </Button>
+
+          <Button onClick={onOpenAddTransaction} variant="primary">
+            <Plus className="w-4 h-4" />
+            <span>Add Expense</span>
+          </Button>
+        </div>
       </div>
 
       {/* Filter Toolbar */}
@@ -258,6 +270,13 @@ export const Transactions: React.FC<TransactionsProps> = ({ onOpenAddTransaction
         title="Delete Transaction?"
         message={`Are you sure you want to delete "${deletingTransaction?.description}" of ₹${deletingTransaction?.amount}?`}
         confirmText="Delete"
+      />
+
+      {/* Report Modal */}
+      <PersonalExpenseReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        transactions={transactions}
       />
     </div>
   );

@@ -6,7 +6,9 @@ import { formatCurrency } from '../utils/formatters';
 import { StatCard } from '../components/statistics/StatCard';
 import { SpendingChart } from '../components/statistics/SpendingChart';
 import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 import { Avatar } from '../components/ui/Avatar';
+import { PersonalExpenseReportModal } from '../components/reports/PersonalExpenseReportModal';
 import { format, subMonths, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import {
   Receipt,
@@ -18,7 +20,8 @@ import {
   TrendingUp,
   PieChart,
   ShoppingBag,
-  Users
+  Users,
+  FileBarChart
 } from 'lucide-react';
 
 const CATEGORY_COLORS: Record<string, { bg: string; bar: string; text: string }> = {
@@ -31,12 +34,15 @@ const CATEGORY_COLORS: Record<string, { bg: string; bar: string; text: string }>
   'Health & Fitness': { bg: 'bg-teal-500/10', bar: 'bg-teal-500', text: 'text-teal-600 dark:text-teal-400' },
   'Rent & Housing': { bg: 'bg-indigo-500/10', bar: 'bg-indigo-500', text: 'text-indigo-600 dark:text-indigo-400' },
   'Education': { bg: 'bg-cyan-500/10', bar: 'bg-cyan-500', text: 'text-cyan-600 dark:text-cyan-400' },
+  'Friend Repayment': { bg: 'bg-violet-500/10', bar: 'bg-violet-500', text: 'text-violet-600 dark:text-violet-400' },
+  'Friend Loan': { bg: 'bg-sky-500/10', bar: 'bg-sky-500', text: 'text-sky-600 dark:text-sky-400' },
   'General': { bg: 'bg-slate-500/10', bar: 'bg-slate-500', text: 'text-slate-600 dark:text-slate-400' }
 };
 
 export const Statistics: React.FC = () => {
   const { activeFriends } = useFriends();
   const { transactions } = useTransactions();
+  const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
 
   const totals = calculateOverallTotals(activeFriends, transactions);
   const spendingBreakdown = useMemo(() => calculateSpendingBreakdown(transactions), [transactions]);
@@ -113,11 +119,22 @@ export const Statistics: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">Statistics & Insights</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          Overview of personal expenses, shared settlements, categories, and monthly trends
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">Statistics & Insights</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Overview of personal expenses, shared settlements, categories, and monthly trends
+          </p>
+        </div>
+
+        <Button
+          onClick={() => setIsReportModalOpen(true)}
+          variant="secondary"
+          className="self-start sm:self-auto"
+        >
+          <FileBarChart className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+          <span>Generate Expense Report</span>
+        </Button>
       </div>
 
       {/* Grid of Key Metrics */}
@@ -292,6 +309,13 @@ export const Statistics: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* Report Modal */}
+      <PersonalExpenseReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        transactions={transactions}
+      />
     </div>
   );
 };

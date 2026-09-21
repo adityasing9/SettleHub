@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { useTransactions } from '../../hooks/useTransactions';
 import { useToast } from '../../context/ToastContext';
-import { Friend, FriendBalance } from '../../types';
+import { Friend, FriendBalance, PAYMENT_MODES } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
-import { CheckCircle2, IndianRupee, ArrowRight } from 'lucide-react';
+import { CheckCircle2, IndianRupee, ArrowRight, Wallet } from 'lucide-react';
 
 interface SettleUpModalProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
 
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [addToPersonalExpense, setAddToPersonalExpense] = useState(true);
+  const [paymentMode, setPaymentMode] = useState<string>('UPI');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -61,9 +64,11 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
         type: 'SETTLEMENT',
         amount: parsedAmount,
         friendId: friend.id,
-        description: note.trim() || 'Settlement',
+        description: note.trim() || (isOwesMe ? 'Settlement received' : 'Friend repayment'),
         date: new Date().toISOString(),
-        paidById
+        paidById,
+        category: !isOwesMe && addToPersonalExpense ? 'Friend Repayment' : undefined,
+        paymentMode: !isOwesMe && addToPersonalExpense ? paymentMode : undefined
       });
 
       const remaining = Math.round((absBalance - parsedAmount) * 100) / 100;
@@ -155,6 +160,41 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
           onChange={e => setNote(e.target.value)}
           placeholder="e.g. Paid via UPI"
         />
+
+        {/* When paying friend, offer to record as Personal Expense */}
+        {!isOwesMe && (
+          <div className="p-3.5 bg-purple-50/80 dark:bg-purple-950/40 rounded-xl border border-purple-200/80 dark:border-purple-900/50 space-y-3">
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={addToPersonalExpense}
+                onChange={e => setAddToPersonalExpense(e.target.checked)}
+                className="rounded border-purple-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+              />
+              <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <Wallet className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                <span>Track as Personal Expense (Friend Repayment)</span>
+              </div>
+            </label>
+            {addToPersonalExpense && (
+              <div className="pt-1">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">
+                  Payment Method
+                </label>
+                <Select
+                  value={paymentMode}
+                  onChange={e => setPaymentMode(e.target.value)}
+                >
+                  {PAYMENT_MODES.map(pm => (
+                    <option key={pm} value={pm}>
+                      {pm}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
           <Button type="button" variant="ghost" onClick={onClose}>

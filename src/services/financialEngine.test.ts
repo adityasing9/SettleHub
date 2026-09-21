@@ -5,7 +5,8 @@ import {
   calculateEqualSplit,
   validateSplit,
   calculateSuggestedSettlements,
-  calculateSpendingBreakdown
+  calculateSpendingBreakdown,
+  calculatePersonalNetBalance
 } from './financialEngine';
 import { Transaction, Friend } from '../types';
 
@@ -314,5 +315,43 @@ describe('Financial Engine Tests', () => {
     const groceries = breakdown.categories.find(c => c.category === 'Groceries');
     expect(groceries?.amount).toBe(1500);
     expect(groceries?.percentage).toBe(50); // 1500 / 3000 = 50%
+  });
+
+  it('should include settlements paid by me in personal spending under Friend Repayment', () => {
+    const transactions: Transaction[] = [
+      {
+        id: 'p1',
+        type: 'PERSONAL_EXPENSE',
+        amount: 800,
+        category: 'Food & Dining',
+        paidById: 'ME',
+        description: 'Dinner',
+        date: '2026-09-15T10:00:00Z',
+        createdAt: '2026-09-15T10:00:00Z',
+        updatedAt: '2026-09-15T10:00:00Z'
+      },
+      // I pay friend ₹400 to settle debt
+      {
+        id: 's1',
+        type: 'SETTLEMENT',
+        amount: 400,
+        friendId: 'f1',
+        paidById: 'ME',
+        description: 'Settling lunch debt',
+        date: '2026-09-15T12:00:00Z',
+        createdAt: '2026-09-15T12:00:00Z',
+        updatedAt: '2026-09-15T12:00:00Z'
+      }
+    ];
+
+    const breakdown = calculateSpendingBreakdown(transactions);
+    expect(breakdown.personalSpent).toBe(1200); // 800 + 400
+    const repaymentCat = breakdown.categories.find(c => c.category === 'Friend Repayment');
+    expect(repaymentCat?.amount).toBe(400);
+
+    const netBal = calculatePersonalNetBalance(transactions);
+    expect(netBal.purePersonalSpent).toBe(800);
+    expect(netBal.debtRepaymentsPaid).toBe(400);
+    expect(netBal.totalPersonalOutflow).toBe(1200);
   });
 });

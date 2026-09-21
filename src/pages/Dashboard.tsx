@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFriends } from '../hooks/useFriends';
 import { useTransactions } from '../hooks/useTransactions';
 import { useGroups } from '../hooks/useGroups';
-import { calculateOverallTotals } from '../services/financialEngine';
+import { calculateOverallTotals, calculatePersonalNetBalance } from '../services/financialEngine';
 import { formatCurrency } from '../utils/formatters';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -12,6 +12,7 @@ import { Avatar } from '../components/ui/Avatar';
 import { TransactionCard } from '../components/transactions/TransactionCard';
 import { FriendCard } from '../components/friends/FriendCard';
 import { EmptyState } from '../components/ui/EmptyState';
+import { PersonalExpenseReportModal } from '../components/reports/PersonalExpenseReportModal';
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -20,7 +21,8 @@ import {
   Plus,
   ChevronRight,
   Sparkles,
-  Receipt
+  Receipt,
+  FileBarChart
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -37,19 +39,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const { transactions } = useTransactions();
   const { groups } = useGroups();
 
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
   const friendsMap = new Map(activeFriends.map(f => [f.id, f]));
   const groupsMap = new Map(groups.map(g => [g.id, g]));
 
   const totals = calculateOverallTotals(activeFriends, transactions);
-
-  // Calculate total personal expenses
-  const personalSpent = React.useMemo(() => {
-    return Math.round(
-      transactions
-        .filter(t => t.type === 'PERSONAL_EXPENSE')
-        .reduce((sum, t) => sum + t.amount, 0) * 100
-    ) / 100;
-  }, [transactions]);
+  const personalNetBal = useMemo(() => calculatePersonalNetBalance(transactions), [transactions]);
 
   // Categorize friends into Who Owes Me vs Who I Owe
   const whoOwesMe = totals.friendBalances.filter(fb => fb.netBalance > 0);
@@ -148,25 +144,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </p>
         </Card>
 
-        {/* Personal Expenses */}
-        <Card
-          onClick={() => navigate('/transactions')}
-          className="p-5 bg-gradient-to-br from-purple-50 to-fuchsia-50/50 dark:from-purple-950/40 dark:to-slate-900 border-purple-200/80 dark:border-purple-900/40 cursor-pointer hover:shadow-md transition-all group"
-        >
+        {/* Personal Expenses Net Outflow */}
+        <Card className="p-5 bg-gradient-to-br from-purple-50 to-fuchsia-50/50 dark:from-purple-950/40 dark:to-slate-900 border-purple-200/80 dark:border-purple-900/40 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-purple-800 dark:text-purple-300 uppercase tracking-wider">
-              Personal Expenses
+              Personal Net Outflow
             </span>
-            <div className="p-2 rounded-xl bg-purple-600 text-white shadow-sm group-hover:scale-105 transition-transform">
+            <div className="p-2 rounded-xl bg-purple-600 text-white shadow-sm">
               <Receipt className="w-4 h-4" />
             </div>
           </div>
           <p className="text-2xl sm:text-3xl font-black text-purple-950 dark:text-purple-100 mt-2">
-            {formatCurrency(personalSpent)}
+            {formatCurrency(personalNetBal.totalPersonalOutflow)}
           </p>
           <div className="flex items-center justify-between text-[11px] text-purple-700 dark:text-purple-400 mt-1 font-semibold">
-            <span>Tracked personal spending</span>
-            <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            <span>Direct: {formatCurrency(personalNetBal.purePersonalSpent)} • Repaid: {formatCurrency(personalNetBal.debtRepaymentsPaid)}</span>
+          </div>
+          <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-purple-100 dark:border-purple-900/50">
+            <button
+              type="button"
+              onClick={() => setIsReportModalOpen(true)}
+              className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:text-purple-900 dark:text-purple-300 dark:hover:text-white"
+            >
+              <FileBarChart className="w-3.5 h-3.5" />
+              <span>Generate Report</span>
+            </button>
+            <span className="text-purple-300 dark:text-purple-700">•</span>
+            <button
+              type="button"
+              onClick={() => navigate('/transactions?type=PERSONAL_EXPENSE')}
+              className="text-xs text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-200"
+            >
+              View List
+            </button>
           </div>
         </Card>
       </div>
@@ -284,6 +294,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
       </div>
+
+      {/* Report Modal */}
+      <PersonalExpenseReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        transactions={transactions}
+      />
     </div>
   );
 };

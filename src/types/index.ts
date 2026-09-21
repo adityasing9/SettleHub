@@ -12,6 +12,8 @@ export const EXPENSE_CATEGORIES = [
   'Health & Fitness',
   'Rent & Housing',
   'Education',
+  'Friend Repayment',
+  'Friend Loan',
   'General'
 ] as const;
 

@@ -238,23 +238,31 @@ export function calculateSpendingBreakdown(transactions: Transaction[]): Spendin
 
   for (const t of transactions) {
     let myAmount = 0;
-    const cat = t.category?.trim() || 'General';
+    let cat = t.category?.trim();
 
     if (t.type === 'PERSONAL_EXPENSE') {
       myAmount = t.amount;
       personalSpent += myAmount;
+      if (!cat) cat = 'General';
+    } else if (t.type === 'SETTLEMENT' && t.paidById === 'ME') {
+      // Money paid to friend to settle debt -> out-of-pocket personal expense
+      myAmount = t.amount;
+      personalSpent += myAmount;
+      if (!cat) cat = 'Friend Repayment';
     } else if (t.type === 'PAID_BY_ME') {
       myAmount = t.amount;
       sharedSpent += myAmount;
+      if (!cat) cat = 'Friend Loan';
     } else if (t.type === 'GROUP_EXPENSE' && t.participants) {
       const me = t.participants.find(p => p.friendId === 'ME');
       if (me) {
         myAmount = me.shareAmount;
         sharedSpent += myAmount;
       }
+      if (!cat) cat = 'General';
     }
 
-    if (myAmount > 0) {
+    if (myAmount > 0 && cat) {
       if (!categoryMap[cat]) {
         categoryMap[cat] = { amount: 0, count: 0 };
       }
@@ -285,6 +293,70 @@ export function calculateSpendingBreakdown(transactions: Transaction[]): Spendin
     personalSpent,
     sharedSpent,
     categories
+  };
+}
+
+export interface PersonalNetBalance {
+  purePersonalSpent: number;
+  loansGivenToFriends: number;
+  debtRepaymentsPaid: number;
+  settlementsReceived: number;
+  totalPersonalOutflow: number;
+  thisMonthPersonalOutflow: number;
+}
+
+/**
+ * Computes personal expense net balance & cash outflow metrics.
+ */
+export function calculatePersonalNetBalance(transactions: Transaction[]): PersonalNetBalance {
+  let purePersonalSpent = 0;
+  let loansGivenToFriends = 0;
+  let debtRepaymentsPaid = 0;
+  let settlementsReceived = 0;
+  let thisMonthPersonalOutflow = 0;
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  for (const t of transactions) {
+    let isThisMonth = false;
+    try {
+      const d = new Date(t.date);
+      if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+        isThisMonth = true;
+      }
+    } catch (e) {}
+
+    if (t.type === 'PERSONAL_EXPENSE') {
+      purePersonalSpent += t.amount;
+      if (isThisMonth) thisMonthPersonalOutflow += t.amount;
+    } else if (t.type === 'SETTLEMENT') {
+      if (t.paidById === 'ME') {
+        debtRepaymentsPaid += t.amount;
+        if (isThisMonth) thisMonthPersonalOutflow += t.amount;
+      } else {
+        settlementsReceived += t.amount;
+      }
+    } else if (t.type === 'PAID_BY_ME') {
+      loansGivenToFriends += t.amount;
+    }
+  }
+
+  purePersonalSpent = Math.round(purePersonalSpent * 100) / 100;
+  loansGivenToFriends = Math.round(loansGivenToFriends * 100) / 100;
+  debtRepaymentsPaid = Math.round(debtRepaymentsPaid * 100) / 100;
+  settlementsReceived = Math.round(settlementsReceived * 100) / 100;
+  const totalPersonalOutflow = Math.round((purePersonalSpent + debtRepaymentsPaid) * 100) / 100;
+  thisMonthPersonalOutflow = Math.round(thisMonthPersonalOutflow * 100) / 100;
+
+  return {
+    purePersonalSpent,
+    loansGivenToFriends,
+    debtRepaymentsPaid,
+    settlementsReceived,
+    totalPersonalOutflow,
+    thisMonthPersonalOutflow
   };
 }
 
