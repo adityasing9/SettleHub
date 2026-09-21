@@ -42,7 +42,7 @@ export const PhoneSenderModal: React.FC<PhoneSenderModalProps> = ({
   onClose,
   preselectedGroupId
 }) => {
-  const { activeFriends } = useFriends();
+  const { friends, activeFriends } = useFriends();
   const { groups } = useGroups();
   const { transactions } = useTransactions();
   const { showToast } = useToast();
@@ -68,10 +68,10 @@ export const PhoneSenderModal: React.FC<PhoneSenderModalProps> = ({
   const allData: BackupData = useMemo(() => ({
     version: 1,
     exportedAt: new Date().toISOString(),
-    friends: activeFriends,
+    friends: friends && friends.length > 0 ? friends : activeFriends,
     groups,
     transactions
-  }), [activeFriends, groups, transactions]);
+  }), [friends, activeFriends, groups, transactions]);
 
   // Filtered payload
   const filteredPayload = useMemo(() => {

@@ -3,7 +3,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useToast } from '../../context/ToastContext';
-import { unpackQRData } from '../../utils/qrDataTransfer';
+import { unpackQRData, processQRScan } from '../../utils/qrDataTransfer';
 import { importJSONBackup, BackupData } from '../../utils/exportImport';
 import {
   Camera,
@@ -39,16 +39,39 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
   const [importing, setImporting] = useState(false);
 
+  // Multi-part scanning state
+  const partsMapRef = useRef<Map<number, string>>(new Map());
+  const currentTagRef = useRef<string | undefined>(undefined);
+  const [multiPartProgress, setMultiPartProgress] = useState<{ current: number; total: number } | null>(null);
+
   // Paste text state
   const [pastedText, setPastedText] = useState('');
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerId = 'settlemate-qr-reader';
 
-  // Process decoded QR text
+  // Process decoded QR text (handles both single and multi-part QR codes)
   const handleDecodedText = (decodedText: string) => {
     try {
-      const data = unpackQRData(decodedText);
+      const res = processQRScan(decodedText, partsMapRef.current, currentTagRef.current);
+      if (res.tag) currentTagRef.current = res.tag;
+
+      if (!res.isComplete) {
+        if (res.totalParts > 1) {
+          setMultiPartProgress({ current: res.partsCount, total: res.totalParts });
+          if ('vibrate' in navigator) {
+            try { navigator.vibrate(80); } catch {}
+          }
+          showToast({
+            type: 'info',
+            title: `Part ${res.currentPart} of ${res.totalParts} Scanned`,
+            description: `Keep pointing camera at screen to scan remaining parts (${res.partsCount}/${res.totalParts} captured).`
+          });
+        }
+        return; // Keep camera scanning for remaining parts
+      }
+
+      const data = res.payload;
       if (!data || typeof data !== 'object') {
         throw new Error('Invalid data decoded from QR code.');
       }
@@ -64,10 +87,18 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
       // Stop camera if running
       stopCamera();
 
+      setMultiPartProgress(null);
+      partsMapRef.current.clear();
+      currentTagRef.current = undefined;
+
       setScannedData(data);
+      if ('vibrate' in navigator) {
+        try { navigator.vibrate([100, 50, 100]); } catch {}
+      }
+
       showToast({
-        type: 'info',
-        title: 'QR Code Scanned!',
+        type: 'success',
+        title: res.totalParts > 1 ? `All ${res.totalParts} Parts Received! 🎉` : 'QR Code Scanned!',
         description: `Found ${groupCount} groups, ${friendCount} friends, and ${txCount} transactions.`
       });
     } catch (err: any) {
@@ -206,6 +237,9 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
 
   const handleResetScan = () => {
     setScannedData(null);
+    setMultiPartProgress(null);
+    partsMapRef.current.clear();
+    currentTagRef.current = undefined;
     if (scanMode === 'CAMERA') {
       setTimeout(() => startCamera(), 100);
     }
@@ -216,6 +250,9 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
       isOpen={isOpen}
       onClose={() => {
         stopCamera();
+        setMultiPartProgress(null);
+        partsMapRef.current.clear();
+        currentTagRef.current = undefined;
         onClose();
       }}
       title="Import Data via QR Code"
@@ -427,13 +464,29 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
             {/* Camera View */}
             {scanMode === 'CAMERA' && (
               <div className="space-y-3">
-                <div
-                  id={scannerContainerId}
-                  className="w-full max-w-sm mx-auto overflow-hidden rounded-2xl bg-black aspect-square flex items-center justify-center relative"
-                >
-                  {!isScanning && !cameraError && (
-                    <div className="text-xs text-white/70 animate-pulse">
-                      Initializing camera...
+                <div className="relative w-full max-w-sm mx-auto">
+                  <div
+                    id={scannerContainerId}
+                    className="w-full overflow-hidden rounded-2xl bg-black aspect-square flex items-center justify-center relative"
+                  >
+                    {!isScanning && !cameraError && (
+                      <div className="text-xs text-white/70 animate-pulse">
+                        Initializing camera...
+                      </div>
+                    )}
+                  </div>
+
+                  {multiPartProgress && (
+                    <div className="absolute top-3 left-3 right-3 z-10 bg-indigo-950/90 text-white p-2.5 rounded-xl text-xs backdrop-blur-xs border border-indigo-400/40 shadow-lg flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                        <span className="font-semibold">
+                          Multi-Part QR: Captured {multiPartProgress.current} of {multiPartProgress.total}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-indigo-300 font-bold">
+                        {Math.round((multiPartProgress.current / multiPartProgress.total) * 100)}%
+                      </span>
                     </div>
                   )}
                 </div>

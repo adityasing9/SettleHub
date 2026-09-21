@@ -566,6 +566,7 @@ export const Settings: React.FC = () => {
       <QRExportModal
         isOpen={isQRExportOpen}
         onClose={() => setIsQRExportOpen(false)}
+        onOpenPhoneSender={() => setIsPhoneSenderOpen(true)}
       />
 
       <QRImportModal

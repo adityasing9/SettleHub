@@ -1,5 +1,6 @@
 import Peer, { DataConnection } from 'peerjs';
 import { BackupData } from '../utils/exportImport';
+import { packQRData, unpackQRData } from '../utils/qrDataTransfer';
 
 export type SyncConnectionStatus =
   | 'INITIALIZING'
@@ -13,6 +14,7 @@ export type SyncConnectionStatus =
 export interface P2PMessage {
   type: 'SYNC_PAYLOAD' | 'SYNC_ACK';
   payload?: BackupData;
+  packedData?: string;
   message?: string;
 }
 
@@ -87,10 +89,18 @@ export function startPCReceiver(
           onStatusChange('TRANSFERRING');
           const msg = rawMsg as P2PMessage;
 
-          if (msg.type === 'SYNC_PAYLOAD' && msg.payload) {
-            onDataReceived(msg.payload);
-            conn.send({ type: 'SYNC_ACK', message: 'Payload received successfully' });
-            onStatusChange('SUCCESS');
+          if (msg.type === 'SYNC_PAYLOAD') {
+            let payload = msg.payload;
+            if (!payload && msg.packedData) {
+              payload = unpackQRData(msg.packedData);
+            }
+            if (payload) {
+              onDataReceived(payload);
+              conn.send({ type: 'SYNC_ACK', message: 'Payload received successfully' });
+              onStatusChange('SUCCESS');
+            } else {
+              throw new Error('Empty payload received');
+            }
           }
         } catch (err: any) {
           onStatusChange('ERROR', err?.message || 'Failed to parse incoming payload');
@@ -190,9 +200,15 @@ export function connectPhoneToPC(
 
         try {
           onStatusChange('TRANSFERRING');
+          let packedData: string | undefined = undefined;
+          try {
+            packedData = packQRData(payload);
+          } catch {}
+
           const message: P2PMessage = {
             type: 'SYNC_PAYLOAD',
-            payload
+            payload,
+            packedData
           };
           connection.send(message);
           resolve(true);

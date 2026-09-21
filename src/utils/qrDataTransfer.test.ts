@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { packQRData, unpackQRData, filterExportPayload } from './qrDataTransfer';
+import { packQRData, unpackQRData, packQRChunks, processQRScan, filterExportPayload } from './qrDataTransfer';
 import { BackupData } from './exportImport';
 
 describe('QR Data Transfer Engine', () => {
@@ -122,4 +122,59 @@ describe('QR Data Transfer Engine', () => {
     expect(filtered.transactions[0].id).toBe('t3');
     expect(filtered.transactions[0].type).toBe('PERSONAL_EXPENSE');
   });
+
+  it('should chunk large payloads and reassemble them seamlessly via processQRScan', () => {
+    // Generate a large payload that exceeds standard chunk size
+    const largePayload: BackupData = {
+      version: 1,
+      exportedAt: '2026-09-22T00:00:00Z',
+      friends: Array.from({ length: 20 }, (_, i) => ({
+        id: `f_${i}`,
+        name: `Friend Number ${i} Long Name`,
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01'
+      })),
+      groups: Array.from({ length: 5 }, (_, i) => ({
+        id: `g_${i}`,
+        name: `Group Title Trip ${i}`,
+        members: ['ME', `f_${i}`],
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01'
+      })),
+      transactions: Array.from({ length: 40 }, (_, i) => ({
+        id: `t_${i}`,
+        type: 'GROUP_EXPENSE',
+        amount: 2500 + i * 17,
+        paidById: 'ME',
+        groupId: 'g_0',
+        description: `Grand itemized dinner description with lots of details #${i}`,
+        date: '2026-09-20T12:00:00Z',
+        createdAt: '2026-09-20T12:00:00Z',
+        updatedAt: '2026-09-20T12:00:00Z'
+      }))
+    };
+
+    // Use smaller chunk size (500) to force multiple chunks
+    const chunks = packQRChunks(largePayload, 500);
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks[0].startsWith('SMQRP:1:')).toBe(true);
+
+    // Simulate scanning each chunk sequentially
+    const partsMap = new Map<number, string>();
+    let lastResult = null;
+
+    for (let i = 0; i < chunks.length; i++) {
+      lastResult = processQRScan(chunks[i], partsMap, lastResult?.tag);
+      if (i < chunks.length - 1) {
+        expect(lastResult.isComplete).toBe(false);
+        expect(lastResult.partsCount).toBe(i + 1);
+      } else {
+        expect(lastResult.isComplete).toBe(true);
+        expect(lastResult.payload).toBeDefined();
+        expect(lastResult.payload?.transactions.length).toBe(largePayload.transactions.length);
+        expect(lastResult.payload?.friends.length).toBe(largePayload.friends.length);
+      }
+    }
+  });
 });
+
