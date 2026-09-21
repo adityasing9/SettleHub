@@ -258,17 +258,55 @@ export const PhoneSenderModal: React.FC<PhoneSenderModalProps> = ({
         {step === 'SELECT' && (
           <div className="space-y-4">
             {/* Connection Banner */}
-            <div className="p-3.5 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-2xl flex items-center justify-between">
+            <div className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all ${
+              connectionStatus === 'CONNECTED'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800'
+                : connectionStatus === 'ERROR'
+                ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800'
+                : 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800'
+            }`}>
               <div className="flex items-center gap-2">
-                <Monitor className="w-4 h-4 text-indigo-600" />
-                <span className="text-xs font-bold text-indigo-950 dark:text-indigo-200">
-                  Connected to your PC!
+                <Monitor className={`w-4 h-4 ${
+                  connectionStatus === 'CONNECTED'
+                    ? 'text-emerald-600'
+                    : connectionStatus === 'ERROR'
+                    ? 'text-rose-600'
+                    : 'text-indigo-600'
+                }`} />
+                <span className={`text-xs font-bold ${
+                  connectionStatus === 'CONNECTED'
+                    ? 'text-emerald-950 dark:text-emerald-200'
+                    : connectionStatus === 'ERROR'
+                    ? 'text-rose-950 dark:text-rose-200'
+                    : 'text-indigo-950 dark:text-indigo-200'
+                }`}>
+                  {connectionStatus === 'CONNECTED'
+                    ? 'Connected to PC!'
+                    : connectionStatus === 'ERROR'
+                    ? 'Connection Error'
+                    : 'Connecting to PC...'}
                 </span>
               </div>
-              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>P2P Ready</span>
-              </span>
+
+              {connectionStatus === 'CONNECTED' ? (
+                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>P2P Ready</span>
+                </span>
+              ) : connectionStatus === 'ERROR' ? (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="text-[11px] font-bold text-rose-600 hover:underline"
+                >
+                  Rescan
+                </button>
+              ) : (
+                <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Connecting...</span>
+                </span>
+              )}
             </div>
 
             {/* Scope Tabs */}
@@ -385,9 +423,23 @@ export const PhoneSenderModal: React.FC<PhoneSenderModalProps> = ({
                 <Button type="button" variant="ghost" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button type="button" variant="primary" onClick={handleSendToPC}>
-                  <Send className="w-4 h-4" />
-                  <span>Send to PC</span>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={handleSendToPC}
+                  disabled={connectionStatus === 'ERROR'}
+                >
+                  {connectionStatus === 'CONNECTING' || connectionStatus === 'INITIALIZING' ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Connecting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>Send to PC</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

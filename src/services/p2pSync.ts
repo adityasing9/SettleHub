@@ -57,13 +57,24 @@ export interface ReceiverController {
   close: () => void;
 }
 
+const PEER_CONFIG = {
+  debug: 1,
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:global.stun.twilio.com:3478' }
+    ]
+  }
+};
+
 /**
  * Starts a WebRTC Receiver session on the PC.
  * Listens for incoming phone connection and handles data transfer.
  */
 export function startPCReceiver(
   onStatusChange: (status: SyncConnectionStatus, error?: string) => void,
-  onDataReceived: (data: BackupData) => void
+  onDataReceived: (data: BackupData) => void,
+  onSessionReady?: (sessionId: string) => void
 ): ReceiverController {
   const sessionId = generateSessionId();
   onStatusChange('INITIALIZING');
@@ -72,12 +83,11 @@ export function startPCReceiver(
   let activeConn: DataConnection | null = null;
 
   try {
-    activePeer = new Peer(sessionId, {
-      debug: 1
-    });
+    activePeer = new Peer(sessionId, PEER_CONFIG);
 
     activePeer.on('open', (id) => {
       onStatusChange('WAITING_FOR_SCAN');
+      if (onSessionReady) onSessionReady(id);
     });
 
     activePeer.on('connection', (conn) => {
@@ -108,7 +118,7 @@ export function startPCReceiver(
       });
 
       conn.on('close', () => {
-        // Connection ended
+        // Connection closed
       });
 
       conn.on('error', (err) => {
@@ -118,6 +128,12 @@ export function startPCReceiver(
 
     activePeer.on('error', (err) => {
       onStatusChange('ERROR', err?.message || 'Peer connection failed');
+    });
+
+    activePeer.on('disconnected', () => {
+      try {
+        activePeer?.reconnect();
+      } catch {}
     });
   } catch (err: any) {
     onStatusChange('ERROR', err?.message || 'Failed to start peer receiver');
@@ -147,6 +163,7 @@ export interface SenderController {
 
 /**
  * Connects phone to PC using the scanned sessionId and streams data over WebRTC.
+ * Awaits connection readiness gracefully if send is clicked while handshake is resolving.
  */
 export function connectPhoneToPC(
   targetSessionId: string,
@@ -157,9 +174,18 @@ export function connectPhoneToPC(
 
   let peer: Peer | null = null;
   let connection: DataConnection | null = null;
+  let isConnectionOpen = false;
+
+  let resolveReady: (conn: DataConnection) => void = () => {};
+  let rejectReady: (err: Error) => void = () => {};
+
+  const readyPromise = new Promise<DataConnection>((resolve, reject) => {
+    resolveReady = resolve;
+    rejectReady = reject;
+  });
 
   try {
-    peer = new Peer({ debug: 1 });
+    peer = new Peer(PEER_CONFIG);
 
     peer.on('open', () => {
       if (!peer) return;
@@ -167,7 +193,9 @@ export function connectPhoneToPC(
       connection = conn;
 
       conn.on('open', () => {
+        isConnectionOpen = true;
         onStatusChange('CONNECTED');
+        resolveReady(conn);
       });
 
       conn.on('data', (rawMsg: any) => {
@@ -179,43 +207,68 @@ export function connectPhoneToPC(
       });
 
       conn.on('error', (err) => {
-        onStatusChange('ERROR', err?.message || 'Connection error');
+        const msg = err?.message || 'Data connection error';
+        onStatusChange('ERROR', msg);
+        rejectReady(new Error(msg));
       });
     });
 
     peer.on('error', (err) => {
-      onStatusChange('ERROR', err?.message || 'Failed to connect to PC');
+      const msg = err?.message || 'Could not connect to PC session';
+      onStatusChange('ERROR', msg);
+      rejectReady(new Error(msg));
+    });
+
+    peer.on('disconnected', () => {
+      try {
+        peer?.reconnect();
+      } catch {}
     });
   } catch (err: any) {
     onStatusChange('ERROR', err?.message || 'Initialization failed');
+    rejectReady(err);
   }
 
   return {
     sendPayload: async (payload: BackupData): Promise<boolean> => {
-      return new Promise((resolve, reject) => {
-        if (!connection) {
-          reject(new Error('Connection not established'));
-          return;
-        }
+      let activeConn = connection;
 
-        try {
-          onStatusChange('TRANSFERRING');
-          let packedData: string | undefined = undefined;
-          try {
-            packedData = packQRData(payload);
-          } catch {}
+      // If not yet open, wait for the connection handshake to finish (up to 15s)
+      if (!activeConn || !isConnectionOpen) {
+        onStatusChange('CONNECTING');
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  'Connection timeout. Please ensure the QR code is still open on your PC monitor and tap Rescan.'
+                )
+              ),
+            15000
+          )
+        );
 
-          const message: P2PMessage = {
-            type: 'SYNC_PAYLOAD',
-            payload,
-            packedData
-          };
-          connection.send(message);
-          resolve(true);
-        } catch (err) {
-          reject(err);
-        }
-      });
+        activeConn = await Promise.race([readyPromise, timeoutPromise]);
+      }
+
+      if (!activeConn) {
+        throw new Error('Could not establish connection to PC. Please tap Rescan and try again.');
+      }
+
+      onStatusChange('TRANSFERRING');
+      let packedData: string | undefined = undefined;
+      try {
+        packedData = packQRData(payload);
+      } catch {}
+
+      const message: P2PMessage = {
+        type: 'SYNC_PAYLOAD',
+        payload,
+        packedData
+      };
+
+      activeConn.send(message);
+      return true;
     },
     close: () => {
       if (connection) {

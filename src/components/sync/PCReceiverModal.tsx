@@ -54,6 +54,8 @@ export const PCReceiverModal: React.FC<PCReceiverModalProps> = ({
 
     setReceivedData(null);
     setErrorMsg(null);
+    setSessionId('');
+    setStatus('INITIALIZING');
 
     const controller = startPCReceiver(
       (newStatus, err) => {
@@ -62,11 +64,13 @@ export const PCReceiverModal: React.FC<PCReceiverModalProps> = ({
       },
       (data) => {
         setReceivedData(data);
+      },
+      (readySessionId) => {
+        setSessionId(readySessionId);
       }
     );
 
     controllerRef.current = controller;
-    setSessionId(controller.peerId);
   };
 
   useEffect(() => {
@@ -324,7 +328,7 @@ export const PCReceiverModal: React.FC<PCReceiverModalProps> = ({
             {/* QR Code Container */}
             <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl inline-block shadow-sm">
               <div className="p-3 bg-white rounded-2xl border border-slate-200 inline-block shadow-inner">
-                {qrString ? (
+                {qrString && status !== 'INITIALIZING' ? (
                   <QRCodeSVG
                     value={qrString}
                     size={240}
@@ -332,8 +336,14 @@ export const PCReceiverModal: React.FC<PCReceiverModalProps> = ({
                     includeMargin={false}
                   />
                 ) : (
-                  <div className="w-[240px] h-[240px] flex items-center justify-center text-xs text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+                  <div className="w-[240px] h-[240px] flex flex-col items-center justify-center gap-3 text-xs text-slate-400">
+                    <Loader2 className="w-7 h-7 animate-spin text-indigo-600" />
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      Starting secure sync session...
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      QR code will appear in a moment
+                    </span>
                   </div>
                 )}
               </div>
