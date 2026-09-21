@@ -5,6 +5,7 @@ import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { useTransactions } from '../../hooks/useTransactions';
 import { useFriends } from '../../hooks/useFriends';
+import { useGroups } from '../../hooks/useGroups';
 import { useToast } from '../../context/ToastContext';
 import { Transaction, EXPENSE_CATEGORIES, PAYMENT_MODES } from '../../types';
 import { IndianRupee, FileText, Calendar } from 'lucide-react';
@@ -22,6 +23,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
 }) => {
   const { updateTransaction } = useTransactions();
   const { activeFriends } = useFriends();
+  const { groups } = useGroups();
   const { showToast } = useToast();
 
   const [description, setDescription] = useState('');
@@ -149,6 +151,28 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           onChange={e => setDescription(e.target.value)}
           leftIcon={<FileText className="w-4 h-4 text-slate-400" />}
         />
+
+        {transaction.type === 'GROUP_EXPENSE' && (
+          <Select
+            label="Who paid for the group? *"
+            value={paidBy}
+            onChange={e => setPaidBy(e.target.value)}
+          >
+            <option value="ME">You (I paid)</option>
+            {transaction.groupId &&
+              groups
+                .find(g => g.id === transaction.groupId)
+                ?.members.filter(m => m !== 'ME')
+                .map(memberId => {
+                  const friend = activeFriends.find(f => f.id === memberId);
+                  return (
+                    <option key={memberId} value={memberId}>
+                      {friend?.name || 'Friend'} paid
+                    </option>
+                  );
+                })}
+          </Select>
+        )}
 
         {transaction.type !== 'GROUP_EXPENSE' && transaction.type !== 'PERSONAL_EXPENSE' && (
           <Select

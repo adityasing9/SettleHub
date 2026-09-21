@@ -69,6 +69,7 @@ Unlike traditional split apps that require cloud sign-ups, third-party backend s
 
 ### 7. 🏕️ Group Expense Splitting
 * **Flexible Groups**: Organize flatmates, road trips (e.g. *Goa Trip 2026*), dinner parties, or shared household bills.
+* **Choose Who Paid (Any Friend or You)**: Easily select which specific friend in the group (or yourself) paid the total bill.
 * **Equal Split**: Automatically divides an expense equally among selected participants.
 * **Custom Split**: Set exact individual rupee shares per person with real-time validation ensuring sum of shares matches total bill.
 * **Cross-Settlement Integration**: Group expenses automatically reflect in the individual balances of participating friends.

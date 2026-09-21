@@ -133,6 +133,62 @@ describe('Financial Engine Tests', () => {
     expect(totals.netOverallBalance).toBe(1600);
   });
 
+  it('should correctly calculate balances when a specific friend pays for a group expense', () => {
+    const rahulId = 'rahul_id';
+    const amitId = 'amit_id';
+
+    const friends: Friend[] = [
+      { id: rahulId, name: 'Rahul', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+      { id: amitId, name: 'Amit', createdAt: '2026-01-01', updatedAt: '2026-01-01' }
+    ];
+
+    // Rahul paid 900 for a group of 3 (ME, Rahul, Amit), 300 each
+    const transactions: Transaction[] = [
+      {
+        id: 'gt1',
+        type: 'GROUP_EXPENSE',
+        amount: 900,
+        paidById: rahulId, // Rahul paid!
+        description: 'Rahul sponsored group trip tickets',
+        date: '2026-09-15T10:00:00Z',
+        splitType: 'EQUAL',
+        participants: [
+          { friendId: 'ME', shareAmount: 300 },
+          { friendId: rahulId, shareAmount: 300 },
+          { friendId: amitId, shareAmount: 300 }
+        ],
+        createdAt: '2026-09-15T10:00:00Z',
+        updatedAt: '2026-09-15T10:00:00Z'
+      }
+    ];
+
+    // From my perspective:
+    // Rahul paid 900 total. My share is 300. So I owe Rahul 300.
+    const rahulBal = calculateFriendBalance(rahulId, 'Rahul', transactions);
+    expect(rahulBal.totalPaidByFriend).toBe(300);
+    expect(rahulBal.totalPaidByMe).toBe(0);
+    expect(rahulBal.netBalance).toBe(-300);
+    expect(rahulBal.status).toBe('I_OWE');
+
+    // From my perspective regarding Amit:
+    // Amit's share was paid by Rahul, not by ME. My balance with Amit should be 0.
+    const amitBal = calculateFriendBalance(amitId, 'Amit', transactions);
+    expect(amitBal.netBalance).toBe(0);
+    expect(amitBal.status).toBe('SETTLED');
+
+    // Suggested settlements for the group:
+    // Net: Rahul +600, ME -300, Amit -300
+    const friendsMap = new Map([
+      ['ME', 'You'],
+      [rahulId, 'Rahul'],
+      [amitId, 'Amit']
+    ]);
+    const settlements = calculateSuggestedSettlements(['ME', rahulId, amitId], friendsMap, transactions);
+    expect(settlements.length).toBe(2);
+    expect(settlements.some(s => s.fromId === 'ME' && s.toId === rahulId && s.amount === 300)).toBe(true);
+    expect(settlements.some(s => s.fromId === amitId && s.toId === rahulId && s.amount === 300)).toBe(true);
+  });
+
   it('should handle equal split rounding accurately', () => {
     const participants = ['ME', 'f1', 'f2'];
     const shares = calculateEqualSplit(100, participants);

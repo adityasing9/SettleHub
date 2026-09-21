@@ -83,15 +83,19 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
   }, [isOpen, mode, defaultFriendId, friendId, activeFriends]);
 
-  // When group changes, update selected participants
+  // When group changes, update selected participants and paidBy
   useEffect(() => {
     if (groupId) {
       const g = groups.find(item => item.id === groupId);
       if (g) {
         setSelectedParticipants(g.members);
+        // Ensure paidBy is a member of the group
+        if (paidBy !== 'ME' && !g.members.includes(paidBy)) {
+          setPaidBy('ME');
+        }
       }
     }
-  }, [groupId, groups]);
+  }, [groupId, groups, paidBy]);
 
   const handleParticipantToggle = (id: string) => {
     if (selectedParticipants.includes(id)) {
@@ -368,40 +372,46 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         )}
 
         {/* Who Paid for Group? (Only for GROUP) */}
-        {mode === 'GROUP' && (
+        {mode === 'GROUP' && groupId && (
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
-              Who paid for the group?
+              Who paid for the group? *
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setPaidBy('ME')}
-                className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
+                className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 ${
                   paidBy === 'ME'
-                    ? 'bg-indigo-50 border-indigo-600 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-500 dark:text-indigo-300'
-                    : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                    ? 'bg-indigo-50 border-indigo-600 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-500 dark:text-indigo-300 shadow-sm'
+                    : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
-                I paid
+                <span>You (I paid)</span>
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (groupId) {
-                    const g = groups.find(item => item.id === groupId);
-                    const firstFriend = g?.members.find(m => m !== 'ME');
-                    if (firstFriend) setPaidBy(firstFriend);
-                  }
-                }}
-                className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                  paidBy !== 'ME'
-                    ? 'bg-indigo-50 border-indigo-600 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-500 dark:text-indigo-300'
-                    : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
-                }`}
-              >
-                Friend paid
-              </button>
+              {groups
+                .find(g => g.id === groupId)
+                ?.members.filter(m => m !== 'ME')
+                .map(memberId => {
+                  const friend = activeFriends.find(f => f.id === memberId);
+                  const name = friend?.name || 'Friend';
+                  const isSelected = paidBy === memberId;
+                  return (
+                    <button
+                      key={memberId}
+                      type="button"
+                      onClick={() => setPaidBy(memberId)}
+                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center truncate ${
+                        isSelected
+                          ? 'bg-indigo-50 border-indigo-600 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-500 dark:text-indigo-300 shadow-sm'
+                          : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      }`}
+                      title={`${name} paid`}
+                    >
+                      {name} paid
+                    </button>
+                  );
+                })}
             </div>
           </div>
         )}
