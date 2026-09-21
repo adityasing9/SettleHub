@@ -70,6 +70,19 @@ export const QRExportModal: React.FC<QRExportModalProps> = ({
   const [isAutoCycling, setIsAutoCycling] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
 
+  // Sync selection lists when groups and friends finish loading from Dexie
+  useEffect(() => {
+    if (selectedGroupIds.length === 0 && groups.length > 0 && !preselectedGroupId) {
+      setSelectedGroupIds(groups.map(g => g.id));
+    }
+  }, [groups, preselectedGroupId]);
+
+  useEffect(() => {
+    if (selectedFriendIds.length === 0 && activeFriends.length > 0 && !preselectedFriendId) {
+      setSelectedFriendIds(activeFriends.map(f => f.id));
+    }
+  }, [activeFriends, preselectedFriendId]);
+
   // Full backup data representation (uses all friends so no references are lost)
   const allData: BackupData = useMemo(() => ({
     version: 1,

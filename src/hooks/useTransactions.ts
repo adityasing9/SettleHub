@@ -4,7 +4,14 @@ import { Transaction } from '../types';
 
 export function useTransactions() {
   const transactions = useLiveQuery(
-    () => db.transactions.orderBy('date').reverse().toArray(),
+    async () => {
+      const all = await db.transactions.toArray();
+      return all.sort((a, b) => {
+        const timeA = a.date ? new Date(a.date).getTime() : new Date(a.createdAt || 0).getTime();
+        const timeB = b.date ? new Date(b.date).getTime() : new Date(b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
+    },
     []
   ) || [];
 

@@ -17,6 +17,7 @@ import {
   filterExportPayload
 } from '../../utils/qrDataTransfer';
 import { BackupData } from '../../utils/exportImport';
+import { db } from '../../db/database';
 import {
   Camera,
   CheckCircle2,
@@ -59,6 +60,19 @@ export const PhoneSenderModal: React.FC<PhoneSenderModalProps> = ({
   );
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>(activeFriends.map(f => f.id));
   const [includePersonalExpenses, setIncludePersonalExpenses] = useState(false);
+
+  // Sync selection lists when groups and friends finish loading from Dexie
+  useEffect(() => {
+    if (selectedGroupIds.length === 0 && groups.length > 0) {
+      setSelectedGroupIds(groups.map(g => g.id));
+    }
+  }, [groups]);
+
+  useEffect(() => {
+    if (selectedFriendIds.length === 0 && activeFriends.length > 0) {
+      setSelectedFriendIds(activeFriends.map(f => f.id));
+    }
+  }, [activeFriends]);
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const senderControllerRef = useRef<SenderController | null>(null);
@@ -159,7 +173,30 @@ export const PhoneSenderModal: React.FC<PhoneSenderModalProps> = ({
 
     try {
       setStep('SENDING');
-      await senderControllerRef.current.sendPayload(filteredPayload);
+
+      // Fetch fresh records directly from Dexie so 100% of all data is included
+      const [allTxs, allFrs, allGrps] = await Promise.all([
+        db.transactions.toArray(),
+        db.friends.toArray(),
+        db.groups.toArray()
+      ]);
+
+      const freshAllData: BackupData = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        friends: allFrs,
+        groups: allGrps,
+        transactions: allTxs
+      };
+
+      const payloadToSend = filterExportPayload(freshAllData, {
+        scope,
+        selectedGroupIds,
+        selectedFriendIds,
+        includePersonalExpenses
+      });
+
+      await senderControllerRef.current.sendPayload(payloadToSend);
     } catch (err: any) {
       showToast({
         type: 'error',
@@ -336,6 +373,33 @@ export const PhoneSenderModal: React.FC<PhoneSenderModalProps> = ({
                 );
               })}
             </div>
+
+            {/* Scope: ALL Info Card */}
+            {scope === 'ALL' && (
+              <div className="p-4 bg-indigo-50/60 dark:bg-indigo-950/40 rounded-2xl border border-indigo-200 dark:border-indigo-800 text-left space-y-2.5">
+                <div className="flex items-center gap-2 font-bold text-xs text-indigo-950 dark:text-indigo-200">
+                  <Database className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span>Full Database Backup (All Data Selected)</span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Every single record will be transferred: all 1-on-1 friend splits, all group trips, personal expenses, settlements, loans, and categories.
+                </p>
+                <div className="grid grid-cols-3 gap-2 pt-1 text-center font-bold">
+                  <div className="p-2 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-900/60 text-xs">
+                    <span className="text-slate-400 font-normal block text-[10px]">Friends</span>
+                    <span className="text-indigo-600 dark:text-indigo-400">{filteredPayload.friends.length}</span>
+                  </div>
+                  <div className="p-2 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-900/60 text-xs">
+                    <span className="text-slate-400 font-normal block text-[10px]">Groups</span>
+                    <span className="text-indigo-600 dark:text-indigo-400">{filteredPayload.groups.length}</span>
+                  </div>
+                  <div className="p-2 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-900/60 text-xs">
+                    <span className="text-slate-400 font-normal block text-[10px]">Total Expenses</span>
+                    <span className="text-emerald-600 dark:text-emerald-400">{filteredPayload.transactions.length}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Group Selection */}
             {scope === 'GROUPS' && (
