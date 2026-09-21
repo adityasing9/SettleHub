@@ -22,8 +22,11 @@ import {
   FileText,
   Clipboard,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  QrCode
 } from 'lucide-react';
+import { QRExportModal } from '../components/export/QRExportModal';
+import { QRImportModal } from '../components/export/QRImportModal';
 
 export const Settings: React.FC = () => {
   const { theme, setTheme } = useTheme();
@@ -37,6 +40,8 @@ export const Settings: React.FC = () => {
   const [pastedJson, setPastedJson] = useState<string>('');
   const [isClearOpen, setIsClearOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isQRExportOpen, setIsQRExportOpen] = useState(false);
+  const [isQRImportOpen, setIsQRImportOpen] = useState(false);
 
   const activeJsonContent = importTab === 'file' ? importFileContent : pastedJson;
 
@@ -223,28 +228,58 @@ export const Settings: React.FC = () => {
 
       {/* Data Backup & Export */}
       <Card className="p-5 space-y-4">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-          Data Export & Backup
-        </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Export your complete database as a JSON backup file or download transactions as CSV for Excel.
-        </p>
+        <div>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+            Data Export & Backup
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Transfer data wirelessly via QR code between devices or download JSON/CSV backups.
+          </p>
+        </div>
 
-        <div className="flex flex-wrap gap-3">
-          <Button onClick={exportJSONBackup} variant="outline" size="sm">
-            <Download className="w-4 h-4 text-indigo-500" />
-            <span>Export JSON Backup</span>
-          </Button>
+        {/* QR Code Sync */}
+        <div className="p-3.5 bg-indigo-50/60 dark:bg-indigo-950/40 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 space-y-2.5">
+          <div className="flex items-center gap-2 text-indigo-900 dark:text-indigo-200 text-xs font-bold">
+            <QrCode className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <span>Wireless QR Code Transfer (Phone-to-Phone)</span>
+          </div>
+          <p className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80">
+            Export all or selected groups/friends as a QR code and scan directly with another device's camera.
+          </p>
+          <div className="flex flex-wrap gap-2.5 pt-1">
+            <Button onClick={() => setIsQRExportOpen(true)} variant="primary" size="sm">
+              <QrCode className="w-4 h-4" />
+              <span>Export via QR Code</span>
+            </Button>
 
-          <Button onClick={exportCSV} variant="outline" size="sm">
-            <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-            <span>Export CSV Report</span>
-          </Button>
+            <Button onClick={() => setIsQRImportOpen(true)} variant="outline" size="sm">
+              <Upload className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Scan QR Code to Import</span>
+            </Button>
+          </div>
+        </div>
 
-          <Button onClick={() => setIsImportOpen(true)} variant="outline" size="sm">
-            <Upload className="w-4 h-4 text-amber-500" />
-            <span>Import JSON Backup</span>
-          </Button>
+        {/* File Based Export */}
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 block">
+            File Backups
+          </span>
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={exportJSONBackup} variant="outline" size="sm">
+              <Download className="w-4 h-4 text-indigo-500" />
+              <span>Export JSON Backup</span>
+            </Button>
+
+            <Button onClick={exportCSV} variant="outline" size="sm">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+              <span>Export CSV Report</span>
+            </Button>
+
+            <Button onClick={() => setIsImportOpen(true)} variant="outline" size="sm">
+              <Upload className="w-4 h-4 text-amber-500" />
+              <span>Import JSON Backup</span>
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -481,6 +516,23 @@ export const Settings: React.FC = () => {
         title="Clear All Local Data?"
         message="This action cannot be undone. All friends, transactions, and group data will be permanently wiped from local browser storage."
         confirmText="Yes, Wipe All Data"
+      />
+
+      <QRExportModal
+        isOpen={isQRExportOpen}
+        onClose={() => setIsQRExportOpen(false)}
+      />
+
+      <QRImportModal
+        isOpen={isQRImportOpen}
+        onClose={() => setIsQRImportOpen(false)}
+        onImportSuccess={() => {
+          showToast({
+            type: 'success',
+            title: 'Database Synced',
+            description: 'New data has been successfully imported from QR code.'
+          });
+        }}
       />
     </div>
   );

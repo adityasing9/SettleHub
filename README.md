@@ -94,7 +94,12 @@ In groups with multiple overlapping expenses (e.g., Alice paid for Bob, Bob paid
 * **Personal vs Shared Split**: Side-by-side comparison of pure personal expenses vs shared friend splits.
 * **Financial Summary Cards**: Real-time totals for **Total Receivable (Owed to you)**, **Total Payable (You owe)**, **Net Friend Balance**, and **Personal Net Outflow**.
 
-### 12. 📁 Local Backup, Export & Restore
+### 12. 📁 Local Backup, QR Transfer & Restore
+* **📷 Wireless QR Code Transfer (Phone-to-Phone)**:
+  * **Sender Selectivity**: Choose to export **All Data**, **Specific Group(s)** (e.g. share just the *Goa Trip*), **Specific Friend(s)**, or **Personal Expenses Only**.
+  * **Compressed Payload**: Uses `pako` deflate compression to pack complete datasets into compact, fast-scanning QR codes.
+  * **QR Code Image Download**: Save the QR code as a `.png` image to share with friends via WhatsApp, Telegram, or email.
+  * **Live Camera & Image Scanner**: Instant in-app camera viewfinder or screenshot upload to decode and preview incoming data with Safe Merge vs Replace.
 * **JSON Backup**: Download a full JSON snapshot of your friends, groups, and transactions (including categories and payment methods).
 * **Universal JSON Import**:
   * **Mobile-friendly File Upload**: Supports Android file manager, Google Drive, and Downloads (`.json`, `.txt`).

@@ -15,6 +15,7 @@ import { TransactionTable } from '../components/transactions/TransactionTable';
 import { TransactionCard } from '../components/transactions/TransactionCard';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { EmptyState } from '../components/ui/EmptyState';
+import { QRExportModal } from '../components/export/QRExportModal';
 import {
   ArrowLeft,
   Users,
@@ -22,7 +23,8 @@ import {
   Trash2,
   Receipt,
   TrendingUp,
-  Sparkles
+  Sparkles,
+  QrCode
 } from 'lucide-react';
 import { Transaction, SuggestedSettlement } from '../types';
 
@@ -45,6 +47,7 @@ export const GroupDetail: React.FC<GroupDetailProps> = ({
   const [isDeleteGroupOpen, setIsDeleteGroupOpen] = useState(false);
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
   const [settlingSuggested, setSettlingSuggested] = useState<SuggestedSettlement | null>(null);
+  const [isShareGroupQROpen, setIsShareGroupQROpen] = useState(false);
 
   const group = groups.find(g => g.id === id);
   const friendsMap = new Map<string, string>();
@@ -124,6 +127,15 @@ export const GroupDetail: React.FC<GroupDetailProps> = ({
             >
               <Plus className="w-4 h-4" />
               <span>+ Add Group Expense</span>
+            </Button>
+            <Button
+              onClick={() => setIsShareGroupQROpen(true)}
+              variant="ghost"
+              className="text-indigo-200 hover:bg-white/10 hover:text-white"
+              title="Share this group via QR code"
+            >
+              <QrCode className="w-4 h-4" />
+              <span className="hidden sm:inline">Share QR</span>
             </Button>
             <Button
               onClick={() => setIsDeleteGroupOpen(true)}
@@ -240,6 +252,15 @@ export const GroupDetail: React.FC<GroupDetailProps> = ({
           settlement={settlingSuggested}
           groupId={group.id}
           groupName={group.name}
+        />
+      )}
+
+      {isShareGroupQROpen && (
+        <QRExportModal
+          isOpen={isShareGroupQROpen}
+          onClose={() => setIsShareGroupQROpen(false)}
+          initialScope="GROUPS"
+          preselectedGroupId={group.id}
         />
       )}
     </div>
