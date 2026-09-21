@@ -25,7 +25,41 @@ Unlike traditional split apps that require cloud sign-ups, third-party backend s
 
 ## 🌟 Core Features & How They Work
 
-### 1. 👥 1-on-1 Friend Transactions
+### 1. 💳 Personal Expense Tracking & Categories
+* **100% Personal Expenses**: Log your everyday personal spending (groceries, food & dining, cab, shopping, utilities, rent) without needing to attach a friend or group.
+* **12 Comprehensive Categories**: *Food & Dining, Groceries, Shopping, Travel & Fuel, Bills & Utilities, Entertainment, Health & Fitness, Rent & Housing, Education, Friend Repayment, Friend Loan, and General*.
+* **Payment Method Tracking**: Tag payments with *UPI, Cash, Credit Card, Debit Card, Net Banking, or Other*.
+* **Visual Distinction**: Personal transactions display a dedicated purple badge and category indicator.
+
+### 2. ⚖️ Personal Expense vs. Giving Loan to Friend
+* **Crystal-Clear Intent**: When adding any payment or expense, choose between:
+  * **Personal Expense**: Your own expense (does not affect any friend's balance).
+  * **Giving Loan to Friend**: Money lent or paid for a friend. The friend owes you back and it immediately updates their running balance.
+  * **Friend Paid for Me**: A friend lent money or paid for you. Added to your debt to that friend.
+  * **Group Split**: Split a shared bill with multiple friends.
+
+### 3. 🔄 Automatic Debt Repayment Tracking
+* **Pay Friend Back & Track Outflow**: When you settle up with a friend (paying money you owed them), SettleMate automatically offers to record that payment as a personal expense under **"Friend Repayment"** with your chosen payment method (e.g. UPI).
+* **True Cash Outflow**: Your friend debt is cleared to ₹0, AND your personal spending metrics accurately reflect the money that physically left your bank account or wallet.
+
+### 4. 📈 Personal Expense Net Balance & Outflow Shower
+* **Personal Net Outflow Card**: Real-time summary on the Dashboard showing:
+  * Total Personal Outflow (Direct purchases + Debt repayments to friends).
+  * Subtitle breakdown: `Direct: ₹X • Repaid: ₹Y`.
+  * Quick links to generate reports or view the filtered personal expense list.
+
+### 5. 📑 Personal Expense Report Generator
+* **Dedicated Reporting Suite**: Accessible from Dashboard, Statistics, and Transactions.
+* **Flexible Date Ranges**: *This Month, Last Month, Last 90 Days, This Year, All Time, or Custom Date Range*.
+* **Advanced Filters**: Filter by Category and Payment Method.
+* **Executive Financial KPIs**: Total Period Spending, Number of Transactions, Daily Average Spending, and Top Category.
+* **Visual Breakdown**: Visual category distribution progress bars with percentages and rupee totals.
+* **Itemized Statement Table**: Date, Category badge, Description, Payment Method, and Amount.
+* **Export & Print**:
+  * **Print / Save as PDF**: Beautiful, clean print-optimized layout (`@media print`) ready to print or save as a PDF statement.
+  * **Download CSV**: Instant CSV export filtered specifically for your selected period and categories.
+
+### 6. 👥 1-on-1 Friend Transactions & Loans
 * **"I Paid" vs "Friend Paid"**: Record expenses you paid on behalf of a friend (*they owe you*), or expenses paid by a friend for you (*you owe them*).
 * **Real-time Running Balance**: Balances are calculated dynamically per friend.
   * **Owes Me (+ ₹X)**: Highlighted in vibrant emerald green.
@@ -33,40 +67,41 @@ Unlike traditional split apps that require cloud sign-ups, third-party backend s
   * **Settled (₹0)**: Clear indicator when accounts are fully balanced.
 * **Friend Profile Page**: Click any friend to view their historical timeline, phone/email notes, and direct settle options.
 
-### 2. 🏕️ Group Expense Splitting
+### 7. 🏕️ Group Expense Splitting
 * **Flexible Groups**: Organize flatmates, road trips (e.g. *Goa Trip 2026*), dinner parties, or shared household bills.
 * **Equal Split**: Automatically divides an expense equally among selected participants.
 * **Custom Split**: Set exact individual rupee shares per person with real-time validation ensuring sum of shares matches total bill.
 * **Cross-Settlement Integration**: Group expenses automatically reflect in the individual balances of participating friends.
 
-### 3. 🧠 Smart Debt Simplification Algorithm
+### 8. 🧠 Smart Debt Simplification Algorithm
 In groups with multiple overlapping expenses (e.g., Alice paid for Bob, Bob paid for Charlie, Charlie paid for Alice), SettleMate eliminates unnecessary intermediate payments.
 * **Greedy Graph Reduction**: Computes net balances for all members, isolates creditors and debtors, and greedily matches them to reduce an $N \times N$ debt web into **at most $N - 1$ direct transactions**.
 * **Suggested Settlements**: Displays clear step-by-step payment instructions (e.g. *"Bob pays ₹250 to Alice"*) with one-click **Settle** buttons.
 
-### 4. 🤝 Settle Up & Payment Clearance
+### 9. 🤝 Settle Up & Payment Clearance
 * Record full or partial debt payments with optional notes (e.g. *GPay*, *PhonePe*, *Cash*, *IMPS*).
 * Instantly updates running ledger balances and records a dedicated `SETTLEMENT` activity entry.
 
-### 5. 🔍 Filter, Search & History
-* **Global Search**: Search by description, friend name, or amount.
-* **Filter by Category**: Food & Dining, Rent & Bills, Travel & Cab, Entertainment, Shopping, Utilities, and General.
-* **Filter by Status**: View *Owes Me*, *I Owe*, or *Settled* records.
+### 10. 🔍 Filter, Search & History
+* **Global Search**: Search by description, friend name, or category.
+* **Filter by Type**: *All Types*, *Personal Expenses Only*, *Money I Paid (Shared)*, *Money Friends Paid*, *Group Expenses*, or *Settlements*.
+* **Filter by Category**: Food & Dining, Groceries, Shopping, Travel & Fuel, Bills & Utilities, Entertainment, Health & Fitness, Rent & Housing, Education, Friend Repayment, Friend Loan, and General.
 * **Sorting**: Sort newest to oldest or highest to lowest amounts.
 
-### 6. 📊 Analytics & Financial Insights
-* **Spending Breakdown**: Interactive pie chart displaying category-wise expenses.
-* **Financial Summary Cards**: Real-time totals for **Total Receivable (Owed to you)**, **Total Payable (You owe)**, and **Net Overall Balance**.
+### 11. 📊 Analytics & Financial Insights
+* **Spending Breakdown**: Interactive visual progress bars and metrics for every expense category.
+* **Personal vs Shared Split**: Side-by-side comparison of pure personal expenses vs shared friend splits.
+* **Financial Summary Cards**: Real-time totals for **Total Receivable (Owed to you)**, **Total Payable (You owe)**, **Net Friend Balance**, and **Personal Net Outflow**.
 
-### 7. 📁 Local Backup, Export & Restore
-* **JSON Backup**: Download a full JSON snapshot of your friends, groups, and transactions.
+### 12. 📁 Local Backup, Export & Restore
+* **JSON Backup**: Download a full JSON snapshot of your friends, groups, and transactions (including categories and payment methods).
 * **Universal JSON Import**:
   * **Mobile-friendly File Upload**: Supports Android file manager, Google Drive, and Downloads (`.json`, `.txt`).
   * **Direct JSON Paste**: Copy backup text from WhatsApp, email, or notes and tap **"Paste from Clipboard"** to restore without file browsing.
   * **Safe Merge vs Replace**: Choose to merge with existing records or wipe and replace.
 * **CSV Spreadsheets**: Export clean transaction history CSVs formatted for Microsoft Excel, Google Sheets, or Apple Numbers.
 
-### 8. 📱 PWA & 100% Offline Capability
+### 13. 📱 PWA & 100% Offline Capability
 * **Installable Application**: Install SettleMate directly on your mobile home screen or desktop taskbar without an App Store / Play Store download.
 * **Full Offline Functionality**: Built with Workbox service worker precaching. View records, add expenses, and settle balances anywhere, even in airplane mode.
 * **Offline Detection Banner**: Notifies you when operating offline and assures your data is safely saved in local storage.
@@ -104,8 +139,9 @@ Transaction Settlement PWA/
 │   │   ├── friends/             # Add/Edit Friend modals & FriendCard
 │   │   ├── groups/              # Add Group modal, GroupCard, SuggestedSettlements
 │   │   ├── layout/              # AppLayout, Header, MobileBottomNav, OfflineBanner
-│   │   ├── statistics/          # StatCard, SpendingChart (Recharts)
-│   │   ├── transactions/        # Add/Edit Transaction & SettleUp modals, TransactionTable
+│   │   ├── reports/             # PersonalExpenseReportModal (Print/PDF & CSV)
+│   │   ├── statistics/          # StatCard, SpendingChart (Visual breakdown)
+│   │   ├── transactions/        # Add/Edit Transaction & SettleUp modals, TransactionTable, TransactionCard
 │   │   └── ui/                  # Reusable Button, Modal, Card, Input, Select, Badge, Avatar
 │   ├── context/
 │   │   ├── ThemeContext.tsx     # Light/Dark/System theme management
