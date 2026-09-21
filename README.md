@@ -55,8 +55,8 @@ Unlike traditional split apps that require cloud sign-ups, third-party backend s
 * **Executive Financial KPIs**: Total Period Spending, Number of Transactions, Daily Average Spending, and Top Category.
 * **Visual Breakdown**: Visual category distribution progress bars with percentages and rupee totals.
 * **Itemized Statement Table**: Date, Category badge, Description, Payment Method, and Amount.
-* **Export & Print**:
-  * **Print / Save as PDF**: Beautiful, clean print-optimized layout (`@media print`) ready to print or save as a PDF statement.
+* **Export & Reports**:
+  * **Direct PDF Export**: Generates and downloads a clean, publication-ready PDF statement directly to your device without opening browser print dialogs.
   * **Download CSV**: Instant CSV export filtered specifically for your selected period and categories.
 
 ### 6. 👥 1-on-1 Friend Transactions & Loans

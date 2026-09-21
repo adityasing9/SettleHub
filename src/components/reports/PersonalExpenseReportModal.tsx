@@ -5,8 +5,10 @@ import { Select } from '../ui/Select';
 import { Input } from '../ui/Input';
 import { Transaction, EXPENSE_CATEGORIES, PAYMENT_MODES } from '../../types';
 import { formatCurrency, formatDateTime } from '../../utils/formatters';
+import { useToast } from '../../context/ToastContext';
+import { generateAndSaveExpensePDF } from '../../utils/pdfReportGenerator';
 import {
-  Printer,
+  FileDown,
   Download,
   Calendar,
   FileText,
@@ -41,6 +43,7 @@ export const PersonalExpenseReportModal: React.FC<PersonalExpenseReportModalProp
   onClose,
   transactions
 }) => {
+  const { showToast } = useToast();
   const [datePreset, setDatePreset] = useState<DatePreset>('THIS_MONTH');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -155,9 +158,45 @@ export const PersonalExpenseReportModal: React.FC<PersonalExpenseReportModalProp
     return Math.round((totalAmount / Math.max(filteredList.length, 1)) * 100) / 100;
   }, [totalAmount, start, end, filteredList.length]);
 
-  // Print Handler
-  const handlePrint = () => {
-    window.print();
+  // Save PDF Handler
+  const handleSavePDF = () => {
+    const presetLabels: Record<DatePreset, string> = {
+      THIS_MONTH: 'This Month',
+      LAST_MONTH: 'Last Month',
+      LAST_90_DAYS: 'Last 90 Days',
+      THIS_YEAR: 'This Year',
+      ALL_TIME: 'All Time',
+      CUSTOM: startDate && endDate ? `${startDate} to ${endDate}` : 'Custom Range'
+    };
+
+    const topCategoryObj = categoryBreakdown.length > 0
+      ? { name: categoryBreakdown[0].category, amount: categoryBreakdown[0].amount }
+      : null;
+
+    const categoryBreakdownData = categoryBreakdown.map(c => ({
+      category: c.category,
+      amount: c.amount,
+      percentage: c.percentage,
+      count: c.count
+    }));
+
+    generateAndSaveExpensePDF({
+      dateRangeLabel: presetLabels[datePreset],
+      categoryFilterLabel: categoryFilter === 'ALL' ? 'All Categories' : categoryFilter,
+      paymentModeFilterLabel: paymentModeFilter === 'ALL' ? 'All Payment Methods' : paymentModeFilter,
+      totalAmount,
+      transactionCount: filteredList.length,
+      dailyAverage,
+      topCategory: topCategoryObj,
+      categoryBreakdown: categoryBreakdownData,
+      transactions: filteredList
+    });
+
+    showToast({
+      type: 'success',
+      title: 'PDF Report Downloaded',
+      description: 'Your expense report has been saved to your device as a PDF.'
+    });
   };
 
   // Export CSV Handler
@@ -399,9 +438,9 @@ export const PersonalExpenseReportModal: React.FC<PersonalExpenseReportModalProp
               <Download className="w-4 h-4" />
               <span>Download CSV</span>
             </Button>
-            <Button type="button" variant="primary" onClick={handlePrint}>
-              <Printer className="w-4 h-4" />
-              <span>Print / Save PDF</span>
+            <Button type="button" variant="primary" onClick={handleSavePDF}>
+              <FileDown className="w-4 h-4" />
+              <span>Save as PDF</span>
             </Button>
           </div>
         </div>
