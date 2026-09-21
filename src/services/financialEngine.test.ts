@@ -6,7 +6,8 @@ import {
   validateSplit,
   calculateSuggestedSettlements,
   calculateSpendingBreakdown,
-  calculatePersonalNetBalance
+  calculatePersonalNetBalance,
+  getSettlementParties
 } from './financialEngine';
 import { Transaction, Friend } from '../types';
 
@@ -409,5 +410,145 @@ describe('Financial Engine Tests', () => {
     expect(netBal.purePersonalSpent).toBe(800);
     expect(netBal.debtRepaymentsPaid).toBe(400);
     expect(netBal.totalPersonalOutflow).toBe(1200);
+  });
+
+  it('should correctly determine settlement parties in getSettlementParties', () => {
+    // 1-on-1: ME pays friend
+    expect(getSettlementParties({ paidById: 'ME', friendId: 'f1' } as any)).toEqual({
+      payer: 'ME',
+      receiver: 'f1'
+    });
+
+    // 1-on-1: friend pays ME (friendId = friendId)
+    expect(getSettlementParties({ paidById: 'f1', friendId: 'f1' } as any)).toEqual({
+      payer: 'f1',
+      receiver: 'ME'
+    });
+
+    // 1-on-1: friend pays ME (friendId = 'ME')
+    expect(getSettlementParties({ paidById: 'f1', friendId: 'ME' } as any)).toEqual({
+      payer: 'f1',
+      receiver: 'ME'
+    });
+
+    // Group settlement: Rahul pays Amit
+    expect(getSettlementParties({ paidById: 'rahul', friendId: 'amit' } as any)).toEqual({
+      payer: 'rahul',
+      receiver: 'amit'
+    });
+
+    // Group settlement: ME pays Amit
+    expect(getSettlementParties({ paidById: 'ME', friendId: 'amit' } as any)).toEqual({
+      payer: 'ME',
+      receiver: 'amit'
+    });
+  });
+
+  it('should settle group debts between two friends without affecting "You" (ME)', () => {
+    const rahulId = 'f_rahul';
+    const amitId = 'f_amit';
+    const groupId = 'group_goa';
+
+    const friendsMap = new Map([
+      ['ME', 'You'],
+      [rahulId, 'Rahul'],
+      [amitId, 'Amit']
+    ]);
+
+    // Initial state: Amit paid ₹900 for dinner for You, Rahul, and Amit (₹300 each)
+    const transactions: Transaction[] = [
+      {
+        id: 'gt1',
+        type: 'GROUP_EXPENSE',
+        amount: 900,
+        paidById: amitId,
+        groupId,
+        description: 'Goa Dinner',
+        date: '2026-09-15T10:00:00Z',
+        participants: [
+          { friendId: 'ME', shareAmount: 300 },
+          { friendId: rahulId, shareAmount: 300 },
+          { friendId: amitId, shareAmount: 300 }
+        ],
+        createdAt: '2026-09-15T10:00:00Z',
+        updatedAt: '2026-09-15T10:00:00Z'
+      }
+    ];
+
+    // Check initial suggestions: Rahul -> Amit (300) and You -> Amit (300)
+    let settlements = calculateSuggestedSettlements(['ME', rahulId, amitId], friendsMap, transactions);
+    expect(settlements.length).toBe(2);
+    expect(settlements.some(s => s.fromId === rahulId && s.toId === amitId && s.amount === 300)).toBe(true);
+    expect(settlements.some(s => s.fromId === 'ME' && s.toId === amitId && s.amount === 300)).toBe(true);
+
+    // Now Rahul settles with Amit directly (₹300)
+    const settlementTx: Transaction = {
+      id: 'st1',
+      type: 'SETTLEMENT',
+      amount: 300,
+      paidById: rahulId,
+      friendId: amitId,
+      groupId,
+      description: 'Rahul paid Amit',
+      date: '2026-09-15T11:00:00Z',
+      createdAt: '2026-09-15T11:00:00Z',
+      updatedAt: '2026-09-15T11:00:00Z'
+    };
+
+    const updatedTransactions = [...transactions, settlementTx];
+
+    // Recalculate suggested settlements
+    settlements = calculateSuggestedSettlements(['ME', rahulId, amitId], friendsMap, updatedTransactions);
+
+    // Only You -> Amit (300) should remain! Rahul is completely settled.
+    expect(settlements.length).toBe(1);
+    expect(settlements[0]).toEqual({
+      fromId: 'ME',
+      fromName: 'You',
+      toId: amitId,
+      toName: 'Amit',
+      amount: 300
+    });
+
+    // Verify 1-on-1 balances with "ME":
+    // Rahul's balance with ME should still be 0 (Rahul did not pay ME, Rahul paid Amit)
+    const rahulBal = calculateFriendBalance(rahulId, 'Rahul', updatedTransactions);
+    expect(rahulBal.netBalance).toBe(0);
+
+    // Amit's balance with ME should still be -300 (ME still owes Amit ₹300)
+    const amitBal = calculateFriendBalance(amitId, 'Amit', updatedTransactions);
+    expect(amitBal.netBalance).toBe(-300);
+    expect(amitBal.status).toBe('I_OWE');
+
+    // Personal outflow stats for ME should NOT have recorded settlementsReceived for Rahul's payment
+    const personalStats = calculatePersonalNetBalance(updatedTransactions);
+    expect(personalStats.settlementsReceived).toBe(0);
+    expect(personalStats.debtRepaymentsPaid).toBe(0);
+
+    // Now "You" (ME) settle with Amit (₹300)
+    const meSettlementTx: Transaction = {
+      id: 'st2',
+      type: 'SETTLEMENT',
+      amount: 300,
+      paidById: 'ME',
+      friendId: amitId,
+      groupId,
+      description: 'You paid Amit',
+      date: '2026-09-15T12:00:00Z',
+      category: 'Friend Repayment',
+      createdAt: '2026-09-15T12:00:00Z',
+      updatedAt: '2026-09-15T12:00:00Z'
+    };
+
+    const finalTransactions = [...updatedTransactions, meSettlementTx];
+    const finalSettlements = calculateSuggestedSettlements(['ME', rahulId, amitId], friendsMap, finalTransactions);
+
+    // All group debts are now 100% settled!
+    expect(finalSettlements.length).toBe(0);
+
+    // Amit's balance with ME is now 0 (Settled)
+    const finalAmitBal = calculateFriendBalance(amitId, 'Amit', finalTransactions);
+    expect(finalAmitBal.netBalance).toBe(0);
+    expect(finalAmitBal.status).toBe('SETTLED');
   });
 });

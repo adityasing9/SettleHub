@@ -10,6 +10,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Avatar } from '../components/ui/Avatar';
 import { SuggestedSettlements } from '../components/groups/SuggestedSettlements';
+import { GroupSettleModal } from '../components/groups/GroupSettleModal';
 import { TransactionTable } from '../components/transactions/TransactionTable';
 import { TransactionCard } from '../components/transactions/TransactionCard';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
@@ -27,7 +28,7 @@ import { Transaction, SuggestedSettlement } from '../types';
 
 interface GroupDetailProps {
   onOpenAddGroupExpense: (groupId: string) => void;
-  onOpenSettleUpModal: (friendId: string) => void;
+  onOpenSettleUpModal?: (friendId: string) => void;
 }
 
 export const GroupDetail: React.FC<GroupDetailProps> = ({
@@ -43,6 +44,7 @@ export const GroupDetail: React.FC<GroupDetailProps> = ({
 
   const [isDeleteGroupOpen, setIsDeleteGroupOpen] = useState(false);
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
+  const [settlingSuggested, setSettlingSuggested] = useState<SuggestedSettlement | null>(null);
 
   const group = groups.find(g => g.id === id);
   const friendsMap = new Map<string, string>();
@@ -77,10 +79,7 @@ export const GroupDetail: React.FC<GroupDetailProps> = ({
   );
 
   const handleSettleSuggested = (s: SuggestedSettlement) => {
-    const friendIdToSettle = s.fromId === 'ME' ? s.toId : s.fromId;
-    if (friendIdToSettle && friendIdToSettle !== 'ME') {
-      onOpenSettleUpModal(friendIdToSettle);
-    }
+    setSettlingSuggested(s);
   };
 
   const handleDeleteGroup = async () => {
@@ -233,6 +232,16 @@ export const GroupDetail: React.FC<GroupDetailProps> = ({
         message={`Are you sure you want to delete "${deletingTransaction?.description}"?`}
         confirmText="Delete"
       />
+
+      {settlingSuggested && (
+        <GroupSettleModal
+          isOpen={!!settlingSuggested}
+          onClose={() => setSettlingSuggested(null)}
+          settlement={settlingSuggested}
+          groupId={group.id}
+          groupName={group.name}
+        />
+      )}
     </div>
   );
 };

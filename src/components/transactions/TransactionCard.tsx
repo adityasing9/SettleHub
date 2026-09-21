@@ -81,6 +81,18 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
                     </>
                   )}
                 </>
+              ) : transaction.type === 'SETTLEMENT' ? (
+                <>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    {getPaidByName(transaction.paidById)} paid {transaction.friendId === 'ME' || transaction.friendId === transaction.paidById ? 'You' : (friendsMap.get(transaction.friendId || '')?.name || 'Friend')}
+                  </span>
+                  {transaction.groupId && (
+                    <>
+                      <span>•</span>
+                      <span className="truncate">{groupsMap.get(transaction.groupId)?.name || 'Group'}</span>
+                    </>
+                  )}
+                </>
               ) : (
                 <>
                   <span>{getPaidByName(transaction.paidById)}</span>

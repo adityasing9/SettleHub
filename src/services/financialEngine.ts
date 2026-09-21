@@ -1,6 +1,25 @@
 import { Friend, Transaction, FriendBalance, SuggestedSettlement, Group } from '../types';
 
 /**
+ * Resolves the payer and receiver of a SETTLEMENT transaction.
+ * In a 1-on-1 settlement:
+ * - When ME pays friend: paidById = 'ME', friendId = friend.id -> payer: 'ME', receiver: friend.id
+ * - When friend pays ME: paidById = friend.id, friendId = friend.id (or 'ME') -> payer: friend.id, receiver: 'ME'
+ * In a group settlement:
+ * - When FriendA pays FriendB: paidById = FriendA, friendId = FriendB -> payer: FriendA, receiver: FriendB
+ * - When FriendA pays ME: paidById = FriendA, friendId = 'ME' (or FriendA) -> payer: FriendA, receiver: 'ME'
+ * - When ME pays FriendA: paidById = 'ME', friendId = FriendA -> payer: 'ME', receiver: FriendA
+ */
+export function getSettlementParties(t: Transaction): { payer: string; receiver: string } {
+  const payer = t.paidById;
+  let receiver = t.friendId || 'ME';
+  if (receiver === payer) {
+    receiver = 'ME';
+  }
+  return { payer, receiver };
+}
+
+/**
  * Calculates net balance and statistics for a specific friend.
  * Net Balance = (Money I paid for Friend + Friend's share of expenses I paid)
  *             - (Money Friend paid for me + My share of expenses Friend paid)
@@ -18,11 +37,12 @@ export function calculateFriendBalance(
       totalPaidByMe += t.amount;
     } else if (t.type === 'PAID_BY_FRIEND' && t.friendId === friendId) {
       totalPaidByFriend += t.amount;
-    } else if (t.type === 'SETTLEMENT' && t.friendId === friendId) {
-      if (t.paidById === friendId) {
+    } else if (t.type === 'SETTLEMENT') {
+      const { payer, receiver } = getSettlementParties(t);
+      if (payer === friendId && receiver === 'ME') {
         // Friend paid me back -> reduces what friend owes me
         totalPaidByFriend += t.amount;
-      } else if (t.paidById === 'ME') {
+      } else if (payer === 'ME' && receiver === friendId) {
         // I paid friend back -> reduces what I owe friend
         totalPaidByMe += t.amount;
       }
@@ -156,10 +176,9 @@ export function calculateSuggestedSettlements(
           netBalances[p.friendId] -= p.shareAmount;
         }
       }
-    } else if (t.type === 'SETTLEMENT' && t.friendId) {
+    } else if (t.type === 'SETTLEMENT') {
       // Settlement within group context
-      const payer = t.paidById;
-      const receiver = t.paidById === 'ME' ? t.friendId : 'ME';
+      const { payer, receiver } = getSettlementParties(t);
       if (netBalances[payer] !== undefined) netBalances[payer] += t.amount;
       if (netBalances[receiver] !== undefined) netBalances[receiver] -= t.amount;
     }
@@ -332,10 +351,11 @@ export function calculatePersonalNetBalance(transactions: Transaction[]): Person
       purePersonalSpent += t.amount;
       if (isThisMonth) thisMonthPersonalOutflow += t.amount;
     } else if (t.type === 'SETTLEMENT') {
-      if (t.paidById === 'ME') {
+      const { payer, receiver } = getSettlementParties(t);
+      if (payer === 'ME') {
         debtRepaymentsPaid += t.amount;
         if (isThisMonth) thisMonthPersonalOutflow += t.amount;
-      } else {
+      } else if (receiver === 'ME') {
         settlementsReceived += t.amount;
       }
     } else if (t.type === 'PAID_BY_ME') {
