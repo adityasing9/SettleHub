@@ -49,6 +49,7 @@ export const PersonalExpenseReportModal: React.FC<PersonalExpenseReportModalProp
   const [endDate, setEndDate] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [paymentModeFilter, setPaymentModeFilter] = useState('ALL');
+  const [viewMode, setViewMode] = useState<'BY_CATEGORY' | 'FLAT'>('BY_CATEGORY');
 
   // Filter personal expenses (and settlements paid by ME)
   const personalTransactions = useMemo(() => {
@@ -65,8 +66,8 @@ export const PersonalExpenseReportModal: React.FC<PersonalExpenseReportModalProp
       case 'THIS_MONTH':
         return { start: startOfMonth(now), end: endOfMonth(now) };
       case 'LAST_MONTH': {
-        const prev = subMonths(now, 1);
-        return { start: startOfMonth(prev), end: endOfMonth(prev) };
+        const lastMonth = subMonths(now, 1);
+        return { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth) };
       }
       case 'LAST_90_DAYS':
         return { start: subDays(now, 90), end: now };
@@ -74,19 +75,19 @@ export const PersonalExpenseReportModal: React.FC<PersonalExpenseReportModalProp
         return { start: startOfYear(now), end: endOfYear(now) };
       case 'CUSTOM':
         return {
-          start: startDate ? new Date(startDate) : null,
-          end: endDate ? new Date(endDate + 'T23:59:59') : null
+          start: startDate ? parseISO(startDate) : undefined,
+          end: endDate ? parseISO(endDate) : undefined
         };
       case 'ALL_TIME':
       default:
-        return { start: null, end: null };
+        return { start: undefined, end: undefined };
     }
   }, [datePreset, startDate, endDate]);
 
-  // Filtered transactions for report
+  // Filtered List
   const filteredList = useMemo(() => {
     return personalTransactions.filter(t => {
-      // 1. Date Range
+      // Date filter
       if (start || end) {
         try {
           const d = parseISO(t.date);
@@ -97,15 +98,14 @@ export const PersonalExpenseReportModal: React.FC<PersonalExpenseReportModalProp
         }
       }
 
-      // 2. Category Filter
+      // Category filter
       const cat = t.category || (t.type === 'SETTLEMENT' ? 'Friend Repayment' : 'General');
       if (categoryFilter !== 'ALL' && cat !== categoryFilter) {
         return false;
       }
 
-      // 3. Payment Mode Filter
-      const pMode = t.paymentMode || 'Other';
-      if (paymentModeFilter !== 'ALL' && pMode !== paymentModeFilter) {
+      // Payment Mode filter
+      if (paymentModeFilter !== 'ALL' && t.paymentMode !== paymentModeFilter) {
         return false;
       }
 
@@ -113,19 +113,20 @@ export const PersonalExpenseReportModal: React.FC<PersonalExpenseReportModalProp
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [personalTransactions, start, end, categoryFilter, paymentModeFilter]);
 
-  // Report Metrics
+  // Aggregated Total
   const totalAmount = useMemo(() => {
-    return filteredList.reduce((sum, t) => sum + t.amount, 0);
+    return Math.round(filteredList.reduce((acc, t) => acc + t.amount, 0) * 100) / 100;
   }, [filteredList]);
 
-  // Category Breakdown
+  // Category Breakdown with itemized transactions
   const categoryBreakdown = useMemo(() => {
-    const map: Record<string, { amount: number; count: number }> = {};
+    const map: Record<string, { amount: number; count: number; transactions: Transaction[] }> = {};
     for (const t of filteredList) {
       const cat = t.category || (t.type === 'SETTLEMENT' ? 'Friend Repayment' : 'General');
-      if (!map[cat]) map[cat] = { amount: 0, count: 0 };
+      if (!map[cat]) map[cat] = { amount: 0, count: 0, transactions: [] };
       map[cat].amount += t.amount;
       map[cat].count += 1;
+      map[cat].transactions.push(t);
     }
 
     return Object.entries(map)
@@ -133,7 +134,8 @@ export const PersonalExpenseReportModal: React.FC<PersonalExpenseReportModalProp
         category: cat,
         amount: Math.round(val.amount * 100) / 100,
         count: val.count,
-        percentage: totalAmount > 0 ? Math.round((val.amount / totalAmount) * 100) : 0
+        percentage: totalAmount > 0 ? Math.round((val.amount / totalAmount) * 100) : 0,
+        transactions: val.transactions
       }))
       .sort((a, b) => b.amount - a.amount);
   }, [filteredList, totalAmount]);
@@ -177,7 +179,8 @@ export const PersonalExpenseReportModal: React.FC<PersonalExpenseReportModalProp
       category: c.category,
       amount: c.amount,
       percentage: c.percentage,
-      count: c.count
+      count: c.count,
+      transactions: c.transactions
     }));
 
     generateAndSaveExpensePDF({
@@ -372,16 +375,107 @@ export const PersonalExpenseReportModal: React.FC<PersonalExpenseReportModalProp
             </div>
           )}
 
-          {/* Itemized Table */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-              <Receipt className="w-4 h-4 text-indigo-600" />
-              <span>Itemized Expenses ({filteredList.length})</span>
-            </h4>
+          {/* Itemized Expenses Section */}
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                <Receipt className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span>Itemized Expenses ({filteredList.length})</span>
+              </h4>
+
+              {filteredList.length > 0 && (
+                <div className="flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-[11px] font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('BY_CATEGORY')}
+                    className={`px-2.5 py-1 rounded-md transition-all ${
+                      viewMode === 'BY_CATEGORY'
+                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    By Category
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('FLAT')}
+                    className={`px-2.5 py-1 rounded-md transition-all ${
+                      viewMode === 'FLAT'
+                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    All Transactions
+                  </button>
+                </div>
+              )}
+            </div>
 
             {filteredList.length === 0 ? (
               <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs text-slate-500">
                 No personal expenses recorded in this period.
+              </div>
+            ) : viewMode === 'BY_CATEGORY' ? (
+              <div className="space-y-3.5">
+                {categoryBreakdown.map(cat => (
+                  <div
+                    key={cat.category}
+                    className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs"
+                  >
+                    {/* Category Header with subtotal */}
+                    <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-slate-900 dark:text-white">
+                          {cat.category}
+                        </span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300">
+                          {cat.count} {cat.count === 1 ? 'item' : 'items'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] uppercase text-slate-400 font-semibold">Subtotal:</span>
+                        <span className="text-xs font-black text-slate-900 dark:text-white">
+                          {formatCurrency(cat.amount)}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          ({cat.percentage}%)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Itemized Table for this category */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-100 dark:border-slate-800/60 text-[10px] text-slate-400 dark:text-slate-500 uppercase font-semibold">
+                            <th className="py-2 px-4">Date & Time</th>
+                            <th className="py-2 px-4">Description</th>
+                            <th className="py-2 px-4">Payment Mode</th>
+                            <th className="py-2 px-4 text-right">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50 font-medium">
+                          {cat.transactions.map(t => (
+                            <tr key={t.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors">
+                              <td className="py-2.5 px-4 text-slate-500 whitespace-nowrap">
+                                {formatDateTime(t.date)}
+                              </td>
+                              <td className="py-2.5 px-4 text-slate-900 dark:text-white font-medium">
+                                {t.description || 'Expense'}
+                              </td>
+                              <td className="py-2.5 px-4 text-slate-500 whitespace-nowrap">
+                                {t.paymentMode || 'Other'}
+                              </td>
+                              <td className="py-2.5 px-4 text-right font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                                {formatCurrency(t.amount)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
