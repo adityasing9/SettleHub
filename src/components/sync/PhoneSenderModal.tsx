@@ -169,7 +169,15 @@ export const PhoneSenderModal: React.FC<PhoneSenderModalProps> = ({
 
   // Trigger data send
   const handleSendToPC = async () => {
-    if (!senderControllerRef.current) return;
+    const controller = senderControllerRef.current;
+    if (!controller) {
+      showToast({
+        type: 'error',
+        title: 'Connection Lost',
+        description: 'WebRTC connection to PC is not active. Please tap Rescan.'
+      });
+      return;
+    }
 
     try {
       setStep('SENDING');
@@ -196,12 +204,12 @@ export const PhoneSenderModal: React.FC<PhoneSenderModalProps> = ({
         includePersonalExpenses
       });
 
-      await senderControllerRef.current.sendPayload(payloadToSend);
+      await controller.sendPayload(payloadToSend);
     } catch (err: any) {
       showToast({
         type: 'error',
         title: 'Transfer Failed',
-        description: err.message || 'Could not send data to PC.'
+        description: err?.message || 'Could not send data to PC.'
       });
       setStep('SELECT');
     }
@@ -217,6 +225,7 @@ export const PhoneSenderModal: React.FC<PhoneSenderModalProps> = ({
     setTimeout(() => startCamera(), 150);
   };
 
+  // Camera management: only active when modal is open and in SCAN step
   useEffect(() => {
     if (isOpen && step === 'SCAN') {
       const timer = setTimeout(() => {
@@ -229,15 +238,24 @@ export const PhoneSenderModal: React.FC<PhoneSenderModalProps> = ({
     } else {
       stopCamera();
     }
+  }, [isOpen, step]);
+
+  // WebRTC controller cleanup: only when modal closes or unmounts
+  useEffect(() => {
+    if (!isOpen) {
+      if (senderControllerRef.current) {
+        senderControllerRef.current.close();
+        senderControllerRef.current = null;
+      }
+    }
 
     return () => {
-      stopCamera();
       if (senderControllerRef.current) {
         senderControllerRef.current.close();
         senderControllerRef.current = null;
       }
     };
-  }, [isOpen, step]);
+  }, [isOpen]);
 
   const toggleGroup = (id: string) => {
     setSelectedGroupIds(prev =>
