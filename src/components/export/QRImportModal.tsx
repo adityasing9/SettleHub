@@ -49,9 +49,36 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerId = 'settlemate-qr-reader';
+  const fileScannerContainerId = 'settlemate-file-qr-reader';
+  const isStoppingRef = useRef(false);
+  const isProcessingRef = useRef(false);
+
+  // Stop camera scanner cleanly
+  const stopCamera = async () => {
+    const scanner = html5QrCodeRef.current;
+    if (!scanner || isStoppingRef.current) return;
+
+    isStoppingRef.current = true;
+    try {
+      if (scanner.isScanning) {
+        await scanner.stop();
+      }
+      try {
+        await scanner.clear();
+      } catch {}
+    } catch (e) {
+      console.warn('Failed to stop camera scanner:', e);
+    } finally {
+      html5QrCodeRef.current = null;
+      setIsScanning(false);
+      isStoppingRef.current = false;
+    }
+  };
 
   // Process decoded QR text (handles both single and multi-part QR codes)
-  const handleDecodedText = (decodedText: string) => {
+  const handleDecodedText = async (decodedText: string) => {
+    if (isProcessingRef.current) return;
+
     try {
       const res = processQRScan(decodedText, partsMapRef.current, currentTagRef.current);
       if (res.tag) currentTagRef.current = res.tag;
@@ -71,6 +98,9 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
         return; // Keep camera scanning for remaining parts
       }
 
+      // Mark processing to ignore concurrent frames
+      isProcessingRef.current = true;
+
       const data = res.payload;
       if (!data || typeof data !== 'object') {
         throw new Error('Invalid data decoded from QR code.');
@@ -84,8 +114,8 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
         throw new Error('QR code does not contain any friends, groups, or transactions.');
       }
 
-      // Stop camera if running
-      stopCamera();
+      // Stop camera cleanly before presenting preview
+      await stopCamera();
 
       setMultiPartProgress(null);
       partsMapRef.current.clear();
@@ -102,6 +132,7 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
         description: `Found ${groupCount} groups, ${friendCount} friends, and ${txCount} transactions.`
       });
     } catch (err: any) {
+      isProcessingRef.current = false;
       showToast({
         type: 'error',
         title: 'Invalid QR Code',
@@ -115,10 +146,11 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
     try {
       setCameraError(null);
       if (html5QrCodeRef.current) {
-        try {
-          await html5QrCodeRef.current.stop();
-        } catch {}
+        await stopCamera();
       }
+
+      const container = document.getElementById(scannerContainerId);
+      if (!container) return;
 
       const html5QrCode = new Html5Qrcode(scannerContainerId);
       html5QrCodeRef.current = html5QrCode;
@@ -147,27 +179,18 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
     }
   };
 
-  // Stop camera scanner
-  const stopCamera = async () => {
-    if (html5QrCodeRef.current && isScanning) {
-      try {
-        await html5QrCodeRef.current.stop();
-        await html5QrCodeRef.current.clear();
-      } catch {}
-      html5QrCodeRef.current = null;
-      setIsScanning(false);
-    }
-  };
-
   // Handle image file scan
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      const html5QrCode = new Html5Qrcode(scannerContainerId);
+      const html5QrCode = new Html5Qrcode(fileScannerContainerId);
       const decodedText = await html5QrCode.scanFile(file, true);
-      handleDecodedText(decodedText);
+      await handleDecodedText(decodedText);
+      try {
+        await html5QrCode.clear();
+      } catch {}
     } catch (err: any) {
       showToast({
         type: 'error',
@@ -179,19 +202,17 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
 
   // Start/Stop camera on modal open/close or scanMode change
   useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
     if (isOpen && scanMode === 'CAMERA' && !scannedData) {
-      // Small timeout to allow DOM container to render
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         startCamera();
       }, 200);
-      return () => {
-        clearTimeout(timer);
-        stopCamera();
-      };
     } else {
       stopCamera();
     }
+
     return () => {
+      if (timer) clearTimeout(timer);
       stopCamera();
     };
   }, [isOpen, scanMode, scannedData]);
@@ -236,6 +257,7 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
   };
 
   const handleResetScan = () => {
+    isProcessingRef.current = false;
     setScannedData(null);
     setMultiPartProgress(null);
     partsMapRef.current.clear();
@@ -249,6 +271,7 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={() => {
+        isProcessingRef.current = false;
         stopCamera();
         setMultiPartProgress(null);
         partsMapRef.current.clear();
@@ -260,6 +283,9 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
       maxWidth="md"
     >
       <div className="space-y-4">
+        {/* Hidden container dedicated for file-based image QR decoding */}
+        <div id={fileScannerContainerId} className="hidden" />
+
         {/* If data is scanned, show Preview & Confirmation Screen */}
         {scannedData ? (
           <div className="space-y-4">
@@ -312,7 +338,7 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
                       key={g.id}
                       className="px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-[11px] font-medium"
                     >
-                      {g.name} ({g.members.length} members)
+                      {g.name} ({g.members?.length || 0} members)
                     </span>
                   ))}
                 </div>
@@ -464,17 +490,18 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
             {/* Camera View */}
             {scanMode === 'CAMERA' && (
               <div className="space-y-3">
-                <div className="relative w-full max-w-sm mx-auto">
-                  <div
-                    id={scannerContainerId}
-                    className="w-full overflow-hidden rounded-2xl bg-black aspect-square flex items-center justify-center relative"
-                  >
-                    {!isScanning && !cameraError && (
+                <div className="relative w-full max-w-sm mx-auto aspect-square overflow-hidden rounded-2xl bg-black">
+                  {/* Clean mount target for Html5Qrcode - zero React children to prevent reconciliation crash */}
+                  <div id={scannerContainerId} className="w-full h-full" />
+
+                  {/* Sibling overlay for loading indicator */}
+                  {!isScanning && !cameraError && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div className="text-xs text-white/70 animate-pulse">
                         Initializing camera...
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {multiPartProgress && (
                     <div className="absolute top-3 left-3 right-3 z-10 bg-indigo-950/90 text-white p-2.5 rounded-xl text-xs backdrop-blur-xs border border-indigo-400/40 shadow-lg flex items-center justify-between">
@@ -541,7 +568,6 @@ export const QRImportModal: React.FC<QRImportModalProps> = ({
                     onChange={handleImageUpload}
                   />
                 </label>
-                <div id={scannerContainerId} className="hidden" />
               </div>
             )}
 

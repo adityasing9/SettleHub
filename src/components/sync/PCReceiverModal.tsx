@@ -191,7 +191,7 @@ export const PCReceiverModal: React.FC<PCReceiverModalProps> = ({
                       key={g.id}
                       className="px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-[11px] font-medium"
                     >
-                      {g.name} ({g.members.length} members)
+                      {g.name} ({g.members?.length || 0} members)
                     </span>
                   ))}
                 </div>
