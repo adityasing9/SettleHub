@@ -1,0 +1,65 @@
+# Built application files
+*.apk
+*.aab
+*.dex
+*.class
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+# Gradle files
+.gradle/
+build/
+app/build/
+core/build/
+**/build/
+gradle-8.7/
+gradle-8.7-bin.zip
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# Log files
+*.log
+
+# Android Studio / IntelliJ IDEA
+.idea/
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+*.iml
+*.ipr
+*.iws
+out/
+.navigation/
+
+# Signing files
+*.jks
+*.keystore
+signing.properties
+
+# Sensitive and Personal Data (NEVER commit user database or memory files)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+export/
+user_data/
+recordings/
+conversations/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Secrets & Environment variables
+*.env
+*.key
+google-services.json
+secrets.properties

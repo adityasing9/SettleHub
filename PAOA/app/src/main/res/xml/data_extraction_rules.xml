@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- Do not automatically backup sensitive databases to cloud -->
+        <exclude domain="database" path="paoa_database.db" />
+        <exclude domain="sharedpref" path="encrypted_user_prefs.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="database" path="paoa_database.db" />
+    </device-transfer>
+</data-extraction-rules>
