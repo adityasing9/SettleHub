@@ -1,7 +1,34 @@
-node_modules
-dist
-dist-ssr
-*.local
-.vscode
-.DS_Store
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Vite cache
+client/.vite/
+
+# Build folders
+dist/
+build/
+client/dist/
+client/build/
+
+# Environment variables
+.env
+client/.env
+server/.env
+
+# Logs
 *.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Other project folders
+RCPC/
+MetaEV/
+PAOA/
